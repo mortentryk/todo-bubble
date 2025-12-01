@@ -1,0 +1,310 @@
+import React, { useEffect, useState } from "react";
+import { Plus, Trophy, Gift } from "lucide-react";
+import BubbleCloud from "./components/BubbleCloud";
+import AddTodosModal from "./components/AddTodosModal";
+import StatsModal from "./components/StatsModal";
+import RewardsModal from "./components/RewardsModal";
+import UserSelector from "./components/UserSelector";
+import { randomPastel, uid } from "./utils/helpers";
+
+const STORAGE_KEY = "bubbleTodos.v3";
+const HISTORY_KEY = "bubbleTodos.history";
+const USER_KEY = "bubbleTodos.user";
+const USERS_LIST_KEY = "bubbleTodos.users";
+const WEEKLY_KEY = "bubbleTodos.weekly";
+const PRIZES_KEY = "bubbleTodos.prizes";
+
+export default function BubbleTodoApp() {
+    const [items, setItems] = useState(() => {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    const [history, setHistory] = useState(() => {
+        try {
+            const raw = localStorage.getItem(HISTORY_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    const [selectedUsers, setSelectedUsers] = useState(() => {
+        const current = localStorage.getItem(USER_KEY);
+        return current ? [current] : [];
+    });
+
+    const [users, setUsers] = useState(() => {
+        try {
+            const raw = localStorage.getItem(USERS_LIST_KEY);
+            const list = raw ? JSON.parse(raw) : [];
+            // Ensure current user is in the list
+            const current = localStorage.getItem(USER_KEY);
+            if (current && !list.includes(current)) {
+                list.push(current);
+            }
+            return list;
+        } catch {
+            return [];
+        }
+    });
+
+    const [weeklyRegistry, setWeeklyRegistry] = useState(() => {
+        try {
+            const raw = localStorage.getItem(WEEKLY_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    const [prizes, setPrizes] = useState(() => {
+        try {
+            const raw = localStorage.getItem(PRIZES_KEY);
+            return raw ? JSON.parse(raw) : [
+                "Free Coffee ☕",
+                "High Five ✋",
+                "Bragging Rights 👑",
+                "10 Minute Break 🧘",
+                "Choose the Music 🎵",
+                "Sweet Treat 🍬",
+                "Early Finish 🏃",
+                "VIP Status 🌟"
+            ];
+        } catch {
+            return [];
+        }
+    });
+
+    const [showModal, setShowModal] = useState(false);
+    const [showStats, setShowStats] = useState(false);
+    const [showRewards, setShowRewards] = useState(false);
+    const floatMode = true;
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }, [items]);
+
+    useEffect(() => {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    }, [history]);
+
+    useEffect(() => {
+        localStorage.setItem(USERS_LIST_KEY, JSON.stringify(users));
+    }, [users]);
+
+    useEffect(() => {
+        localStorage.setItem(WEEKLY_KEY, JSON.stringify(weeklyRegistry));
+    }, [weeklyRegistry]);
+
+    useEffect(() => {
+        localStorage.setItem(PRIZES_KEY, JSON.stringify(prizes));
+    }, [prizes]);
+
+    // Check for weekly tasks to respawn
+    useEffect(() => {
+        const now = Date.now();
+        const oneWeek = 7 * 24 * 60 * 60 * 1000;
+
+        const toRespawn = weeklyRegistry.filter(w => {
+            // If never popped, or popped more than a week ago
+            const ready = !w.lastPoppedAt || (now - w.lastPoppedAt > oneWeek);
+            // And not currently in items (check by text to avoid duplicates if ID changed)
+            const alreadyExists = items.some(i => i.text === w.text);
+            return ready && !alreadyExists;
+        });
+
+        if (toRespawn.length > 0) {
+            const newItems = toRespawn.map(w => ({
+                id: uid(),
+                text: w.text,
+                color: randomPastel(),
+                done: false,
+                createdAt: Date.now(),
+                score: w.score,
+                isWeekly: true,
+                weeklyId: w.id // link back to registry
+            }));
+            setItems(prev => [...prev, ...newItems]);
+        }
+    }, [weeklyRegistry, items]); // Run when registry loads/changes, items check is implicitly handled on mount/update
+
+    // Bulk add from modal
+    const addMany = (texts, options = {}) => {
+        const { score = 5, isWeekly = false } = options;
+        const now = Date.now();
+
+        const newItems = texts
+            .map((t) => t.trim())
+            .filter((t) => t.length > 0)
+            .map((t) => {
+                const id = uid();
+                return {
+                    id,
+                    text: t,
+                    color: randomPastel(),
+                    done: false,
+                    createdAt: now,
+                    score,
+                    isWeekly,
+                    weeklyId: isWeekly ? uid() : null
+                };
+            });
+
+        if (newItems.length) {
+            setItems((prev) => [...prev, ...newItems]);
+
+            if (isWeekly) {
+                const newRegistryItems = newItems.map(it => ({
+                    id: it.weeklyId,
+                    text: it.text,
+                    score: it.score,
+                    lastPoppedAt: null
+                }));
+                setWeeklyRegistry(prev => [...prev, ...newRegistryItems]);
+            }
+        }
+    };
+
+    const popItem = (id) => {
+        const item = items.find((it) => it.id === id);
+        if (!item) return;
+
+        // Immediate removal from active list
+        setItems((prev) => prev.filter((it) => it.id !== id));
+
+        // Add to history for each selected user
+        const usersToCredit = selectedUsers.length > 0 ? selectedUsers : ["Anonymous"];
+        const historyEntries = usersToCredit.map(user => ({
+            ...item,
+            poppedAt: Date.now(),
+            poppedBy: user
+        }));
+
+        setHistory((prev) => [...prev, ...historyEntries]);
+
+        // Update weekly registry if applicable
+        if (item.isWeekly && item.weeklyId) {
+            setWeeklyRegistry(prev => prev.map(w =>
+                w.id === item.weeklyId ? { ...w, lastPoppedAt: Date.now() } : w
+            ));
+        }
+    };
+
+    const removeItem = (id) => {
+        const item = items.find(it => it.id === id);
+        setItems((prev) => prev.filter((it) => it.id !== id));
+        // If removing a weekly item manually (not popping), maybe we should remove from registry too?
+        // For now, let's assume "delete" means "I don't want this task anymore".
+        if (item?.isWeekly && item.weeklyId) {
+            setWeeklyRegistry(prev => prev.filter(w => w.id !== item.weeklyId));
+        }
+    };
+
+    const renameItem = (id, newText) => {
+        setItems((prev) => prev.map((it) => (it.id === id ? { ...it, text: newText } : it)));
+        // Also update registry if it's weekly
+        const item = items.find(it => it.id === id);
+        if (item?.isWeekly && item.weeklyId) {
+            setWeeklyRegistry(prev => prev.map(w => w.id === item.weeklyId ? { ...w, text: newText } : w));
+        }
+    };
+
+    const handleAddUser = (name) => {
+        if (!users.includes(name)) {
+            setUsers(prev => [...prev, name]);
+        }
+    };
+
+    const toggleUserSelection = (user) => {
+        setSelectedUsers(prev => {
+            if (prev.includes(user)) {
+                return prev.filter(u => u !== user);
+            } else {
+                return [...prev, user];
+            }
+        });
+    };
+
+    return (
+        <div className="min-h-screen w-full bg-gradient-to-b from-sky-50 to-slate-100 text-slate-800 font-sans">
+            <div className="mx-auto max-w-5xl p-6">
+                {/* Header / Controls */}
+                <div className="flex items-center justify-between mb-4">
+                    <UserSelector
+                        users={users}
+                        selectedUsers={selectedUsers}
+                        onToggleUser={toggleUserSelection}
+                        onAdd={handleAddUser}
+                    />
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowStats(true)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white shadow-sm hover:shadow transition-all text-slate-600 font-medium text-sm"
+                        >
+                            <Trophy size={16} className="text-yellow-500" />
+                            Stats
+                        </button>
+                        <button
+                            onClick={() => setShowRewards(true)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-sm hover:shadow transition-all text-white font-medium text-sm"
+                        >
+                            <Gift size={16} />
+                            Rewards
+                        </button>
+                    </div>
+                </div>
+
+                {/* Bubbles only */}
+                <BubbleCloud
+                    items={items}
+                    popItem={popItem}
+                    removeItem={removeItem}
+                    renameItem={renameItem}
+                    setItems={setItems}
+                    floatMode={floatMode}
+                />
+
+                {/* Floating Add button */}
+                <button
+                    onClick={() => setShowModal(true)}
+                    className="fixed bottom-6 right-6 inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-4 text-white shadow-lg hover:shadow-xl active:scale-95 transition-transform z-40"
+                    title="Add bubbles"
+                >
+                    <Plus size={18} /> Add
+                </button>
+
+                {/* Modals */}
+                <AddTodosModal
+                    open={showModal}
+                    onClose={() => setShowModal(false)}
+                    onAdd={(lines, options) => {
+                        addMany(lines, options);
+                        setShowModal(false);
+                    }}
+                />
+
+                <StatsModal
+                    open={showStats}
+                    onClose={() => setShowStats(false)}
+                    history={history}
+                    selectedUsers={selectedUsers}
+                />
+
+                <RewardsModal
+                    open={showRewards}
+                    onClose={() => setShowRewards(false)}
+                    history={history}
+                    selectedUsers={selectedUsers}
+                    prizes={prizes}
+                    onUpdatePrizes={setPrizes}
+                />
+            </div>
+        </div>
+    );
+}
