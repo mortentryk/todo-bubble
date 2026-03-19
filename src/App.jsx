@@ -33,9 +33,9 @@ export default function BubbleTodoApp() {
         }
     });
 
-    const [selectedUsers, setSelectedUsers] = useState(() => {
+    const [activeUser, setActiveUser] = useState(() => {
         const current = localStorage.getItem(USER_KEY);
-        return current ? [current] : [];
+        return current || "";
     });
 
     const [users, setUsers] = useState(() => {
@@ -96,6 +96,14 @@ export default function BubbleTodoApp() {
     useEffect(() => {
         localStorage.setItem(USERS_LIST_KEY, JSON.stringify(users));
     }, [users]);
+
+    useEffect(() => {
+        if (activeUser) {
+            localStorage.setItem(USER_KEY, activeUser);
+        } else {
+            localStorage.removeItem(USER_KEY);
+        }
+    }, [activeUser]);
 
     useEffect(() => {
         localStorage.setItem(WEEKLY_KEY, JSON.stringify(weeklyRegistry));
@@ -173,19 +181,21 @@ export default function BubbleTodoApp() {
     const popItem = (id) => {
         const item = items.find((it) => it.id === id);
         if (!item) return;
+        if (!activeUser) {
+            window.alert("Select a user before popping bubbles.");
+            return;
+        }
 
         // Immediate removal from active list
         setItems((prev) => prev.filter((it) => it.id !== id));
 
-        // Add to history for each selected user
-        const usersToCredit = selectedUsers.length > 0 ? selectedUsers : ["Anonymous"];
-        const historyEntries = usersToCredit.map(user => ({
+        // Add to history for the active user only
+        const historyEntry = {
             ...item,
             poppedAt: Date.now(),
-            poppedBy: user
-        }));
-
-        setHistory((prev) => [...prev, ...historyEntries]);
+            poppedBy: activeUser
+        };
+        setHistory((prev) => [...prev, historyEntry]);
 
         // Update weekly registry if applicable
         if (item.isWeekly && item.weeklyId) {
@@ -218,41 +228,34 @@ export default function BubbleTodoApp() {
         if (!users.includes(name)) {
             setUsers(prev => [...prev, name]);
         }
+        setActiveUser(name);
     };
 
-    const toggleUserSelection = (user) => {
-        setSelectedUsers(prev => {
-            if (prev.includes(user)) {
-                return prev.filter(u => u !== user);
-            } else {
-                return [...prev, user];
-            }
-        });
-    };
+    const selectUser = (user) => setActiveUser(user);
 
     return (
         <div className="min-h-screen w-full bg-gradient-to-b from-sky-50 to-slate-100 text-slate-800 font-sans">
-            <div className="mx-auto max-w-5xl p-6">
+            <div className="mx-auto max-w-5xl p-3 sm:p-6">
                 {/* Header / Controls */}
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                     <UserSelector
                         users={users}
-                        selectedUsers={selectedUsers}
-                        onToggleUser={toggleUserSelection}
+                        activeUser={activeUser}
+                        onSelectUser={selectUser}
                         onAdd={handleAddUser}
                     />
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-full sm:w-auto">
                         <button
                             onClick={() => setShowStats(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white shadow-sm hover:shadow transition-all text-slate-600 font-medium text-sm"
+                            className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white shadow-sm hover:shadow transition-all text-slate-600 font-medium text-sm"
                         >
                             <Trophy size={16} className="text-yellow-500" />
                             Stats
                         </button>
                         <button
                             onClick={() => setShowRewards(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-sm hover:shadow transition-all text-white font-medium text-sm"
+                            className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-sm hover:shadow transition-all text-white font-medium text-sm"
                         >
                             <Gift size={16} />
                             Rewards
@@ -273,7 +276,7 @@ export default function BubbleTodoApp() {
                 {/* Floating Add button */}
                 <button
                     onClick={() => setShowModal(true)}
-                    className="fixed bottom-6 right-6 inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-4 text-white shadow-lg hover:shadow-xl active:scale-95 transition-transform z-40"
+                    className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-3 sm:px-5 sm:py-4 text-white shadow-lg hover:shadow-xl active:scale-95 transition-transform z-40"
                     title="Add bubbles"
                 >
                     <Plus size={18} /> Add
@@ -293,14 +296,14 @@ export default function BubbleTodoApp() {
                     open={showStats}
                     onClose={() => setShowStats(false)}
                     history={history}
-                    selectedUsers={selectedUsers}
+                    activeUser={activeUser}
                 />
 
                 <RewardsModal
                     open={showRewards}
                     onClose={() => setShowRewards(false)}
                     history={history}
-                    selectedUsers={selectedUsers}
+                    activeUser={activeUser}
                     prizes={prizes}
                     onUpdatePrizes={setPrizes}
                 />

@@ -38,7 +38,7 @@ export default function AddTodosModal({ open, onClose, onAdd }) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+                    className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm p-3 sm:p-0"
                     onClick={onClose}
                 >
                     <motion.div
@@ -46,7 +46,7 @@ export default function AddTodosModal({ open, onClose, onAdd }) {
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 20, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 320, damping: 28 }}
-                        className="absolute left-1/2 top-1/2 w-[92vw] max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 shadow-2xl border border-slate-200"
+                        className="absolute left-1/2 top-1/2 w-[94vw] sm:w-[92vw] max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-4 sm:p-5 shadow-2xl border border-slate-200 max-h-[86vh] overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <h2 className="text-lg font-semibold mb-3">Add bubbles</h2>
@@ -84,13 +84,13 @@ export default function AddTodosModal({ open, onClose, onAdd }) {
                             </label>
                         </div>
 
-                        <div className="flex items-center justify-between text-sm text-slate-500">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-sm text-slate-500 gap-2">
                             <span>{lines.length} item{lines.length === 1 ? "" : "s"} ready</span>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 w-full sm:w-auto">
                                 <button onClick={onClose} className="rounded-xl border border-slate-300 bg-white px-4 py-2 shadow-sm hover:bg-slate-50">Cancel</button>
                                 <button
                                     onClick={handleAdd}
-                                    className="rounded-xl bg-slate-900 px-4 py-2 text-white shadow hover:shadow-md disabled:opacity-40"
+                                    className="rounded-xl bg-slate-900 px-4 py-2 text-white shadow hover:shadow-md disabled:opacity-40 flex-1 sm:flex-none"
                                     disabled={!lines.length}
                                 >
                                     Add {lines.length ? `(${lines.length})` : ""}

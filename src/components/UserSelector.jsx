@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { User, Plus, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function UserSelector({ users, selectedUsers, onToggleUser, onAdd }) {
+export default function UserSelector({ users, activeUser, onSelectUser, onAdd }) {
     const [isAdding, setIsAdding] = useState(false);
     const [newName, setNewName] = useState("");
 
@@ -11,7 +11,6 @@ export default function UserSelector({ users, selectedUsers, onToggleUser, onAdd
         const name = newName.trim();
         if (name) {
             onAdd(name);
-            onToggleUser(name);
             setNewName("");
             setIsAdding(false);
         }
@@ -21,11 +20,11 @@ export default function UserSelector({ users, selectedUsers, onToggleUser, onAdd
         <div className="flex flex-wrap items-center gap-2">
             {/* User Chips */}
             {users.map((user) => {
-                const isSelected = selectedUsers.includes(user);
+                const isSelected = activeUser === user;
                 return (
                     <button
                         key={user}
-                        onClick={() => onToggleUser(user)}
+                        onClick={() => onSelectUser(user)}
                         className={`
               flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all
               ${isSelected

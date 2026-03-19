@@ -82,14 +82,14 @@ export default function BubbleCloud({ items, popItem, removeItem, renameItem, se
         <div
             ref={containerRef}
             className={
-                "min-h-[70vh] rounded-3xl bg-white/80 p-4 shadow-lg border border-slate-200 overflow-hidden " +
+                "min-h-[62vh] sm:min-h-[70vh] rounded-3xl bg-white/80 p-2 sm:p-4 shadow-lg border border-slate-200 overflow-hidden " +
                 (floatMode ? "relative" : "")
             }
         >
             <AnimatePresence>
                 {floatMode ? (
                     // Absolute-positioned floating bubbles
-                    <div className="relative w-full h-[70vh]">
+                    <div className="relative w-full h-[62vh] sm:h-[70vh]">
                         {items.map((it) => {
                             const p = positions[it.id];
                             const r = p?.r ?? radiusFor(it.text);
@@ -121,7 +121,7 @@ export default function BubbleCloud({ items, popItem, removeItem, renameItem, se
             </AnimatePresence>
 
             {items.length === 0 && (
-                <div className="flex items-center justify-center h-[50vh] text-slate-400">
+                <div className="flex items-center justify-center h-[44vh] sm:h-[50vh] text-slate-400 text-center px-4">
                     Click "Add" to create your first bubble!
                 </div>
             )}

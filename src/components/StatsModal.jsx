@@ -2,7 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, X, Star } from "lucide-react";
 
-export default function StatsModal({ open, onClose, history, selectedUsers }) {
+export default function StatsModal({ open, onClose, history, activeUser }) {
     // Calculate stats
     const stats = history.reduce((acc, item) => {
         const name = item.poppedBy || "Anonymous";
@@ -59,7 +59,7 @@ export default function StatsModal({ open, onClose, history, selectedUsers }) {
                             ) : (
                                 <div className="space-y-4">
                                     {sortedStats.map((user, index) => {
-                                        const isSelected = selectedUsers.includes(user.name);
+                                        const isSelected = activeUser === user.name;
                                         return (
                                             <div
                                                 key={user.name}

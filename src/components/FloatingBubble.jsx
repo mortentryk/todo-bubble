@@ -6,7 +6,21 @@ export default function FloatingBubble({ text, onPop, onRename, onRemove, score,
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(text);
     const [isHovered, setIsHovered] = useState(false);
+    const [isTouchDevice, setIsTouchDevice] = useState(false);
     useEffect(() => setDraft(text), [text]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const mq = window.matchMedia("(hover: none), (pointer: coarse)");
+        const apply = () => setIsTouchDevice(mq.matches);
+        apply();
+        if (mq.addEventListener) {
+            mq.addEventListener("change", apply);
+            return () => mq.removeEventListener("change", apply);
+        }
+        mq.addListener(apply);
+        return () => mq.removeListener(apply);
+    }, []);
 
     // Gentle breathing animation
     const controls = useAnimation();
@@ -79,7 +93,7 @@ export default function FloatingBubble({ text, onPop, onRename, onRemove, score,
                 }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                title="Click to pop, double‑click to edit"
+                title={isTouchDevice ? "Tap to pop. Use buttons to edit/delete" : "Click to pop, double-click to edit"}
             >
                 {/* Main highlight - classic bubble shine */}
                 <div
@@ -151,7 +165,7 @@ export default function FloatingBubble({ text, onPop, onRename, onRemove, score,
             </motion.button>
 
             {/* Hover controls */}
-            {isHovered && (
+            {(isHovered || isTouchDevice) && !editing && (
                 <div className="absolute -top-2 -right-2 flex gap-1.5">
                     <motion.button
                         onClick={() => setEditing((v) => !v)}

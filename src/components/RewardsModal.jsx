@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Star, Gift, PartyPopper, Plus, Trash2, Trophy } from "lucide-react";
 
-export default function RewardsModal({ open, onClose, history, selectedUsers, prizes = [], onUpdatePrizes }) {
+export default function RewardsModal({ open, onClose, history, activeUser, prizes = [], onUpdatePrizes }) {
     const [prizeRevealed, setPrizeRevealed] = useState(null);
     const [isAddingPrize, setIsAddingPrize] = useState(false);
     const [newPrize, setNewPrize] = useState("");
@@ -23,7 +23,7 @@ export default function RewardsModal({ open, onClose, history, selectedUsers, pr
         .map(([name, data]) => ({ name, ...data }));
 
     const leader = sortedStats[0];
-    const isLeader = leader && selectedUsers.length > 0 && selectedUsers.includes(leader.name);
+    const isLeader = leader && activeUser === leader.name;
 
     const handleClaimPrize = () => {
         if (prizes.length === 0) return;
@@ -182,7 +182,7 @@ export default function RewardsModal({ open, onClose, history, selectedUsers, pr
                                     )
                                 ) : (
                                     <div className="text-sm text-slate-400 bg-slate-50 px-4 py-2 rounded-lg">
-                                        {selectedUsers.length === 0 ? "Select a user to see if you're the leader!" : "Only the leader can claim the prize. Keep popping!"}
+                                        {!activeUser ? "Select a user to see if you're the leader!" : "Only the leader can claim the prize. Keep popping!"}
                                     </div>
                                 )}
                             </div>
