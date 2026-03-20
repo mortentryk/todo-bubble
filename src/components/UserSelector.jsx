@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { User, Plus, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function UserSelector({ users, activeUser, onSelectUser, onAdd }) {
+export default function UserSelector({ users, activeUser, onSelectUser, onAdd, onDoubleTap }) {
     const [isAdding, setIsAdding] = useState(false);
     const [newName, setNewName] = useState("");
+    const lastClickRef = useRef({});
 
     const handleAdd = (e) => {
         e.preventDefault();
@@ -21,10 +22,28 @@ export default function UserSelector({ users, activeUser, onSelectUser, onAdd })
             {/* User Chips */}
             {users.map((user) => {
                 const isSelected = activeUser === user;
+                const handleClick = () => {
+                    const now = Date.now();
+                    const lastClick = lastClickRef.current[user] || 0;
+                    const timeDiff = now - lastClick;
+
+                    if (timeDiff < 300 && timeDiff > 0) {
+                        // Double tap detected
+                        if (onDoubleTap) {
+                            onDoubleTap(user);
+                        }
+                        lastClickRef.current[user] = 0; // Reset to prevent triple-tap
+                    } else {
+                        // Single click
+                        onSelectUser(user);
+                        lastClickRef.current[user] = now;
+                    }
+                };
+
                 return (
                     <button
                         key={user}
-                        onClick={() => onSelectUser(user)}
+                        onClick={handleClick}
                         className={`
               flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all
               ${isSelected

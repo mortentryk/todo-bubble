@@ -88,6 +88,7 @@ export default function BubbleTodoApp() {
     const [showModal, setShowModal] = useState(false);
     const [showStats, setShowStats] = useState(false);
     const [showRewards, setShowRewards] = useState(false);
+    const [showAvatar, setShowAvatar] = useState(false);
     const [currentView, setCurrentView] = useState("bubbles");
     const floatMode = true;
     const [goals, setGoals] = useState(() => {
@@ -318,6 +319,18 @@ export default function BubbleTodoApp() {
         setActiveUser(user);
     };
 
+    const handleUserDoubleTap = (user) => {
+        if (activeUser === user) {
+            // Toggle avatar visibility for current user
+            setShowAvatar(prev => !prev);
+        } else {
+            // Switch to this user and show avatar
+            ensureAvatarProfile(user);
+            setActiveUser(user);
+            setShowAvatar(true);
+        }
+    };
+
     const activeAvatarProfile = activeUser ? avatarProfiles[activeUser] : null;
 
     const addGoal = (title) => {
@@ -371,13 +384,16 @@ export default function BubbleTodoApp() {
                             activeUser={activeUser}
                             onSelectUser={selectUser}
                             onAdd={handleAddUser}
+                            onDoubleTap={handleUserDoubleTap}
                         />
-                        <AvatarCard
-                            activeUser={activeUser}
-                            profile={activeAvatarProfile}
-                            getAvatarName={getAvatarByLevel}
-                            getProgress={getLevelProgress}
-                        />
+                        {showAvatar && (
+                            <AvatarCard
+                                activeUser={activeUser}
+                                profile={activeAvatarProfile}
+                                getAvatarName={getAvatarByLevel}
+                                getProgress={getLevelProgress}
+                            />
+                        )}
                     </div>
 
                     <div className="flex gap-2 w-full sm:w-auto">
