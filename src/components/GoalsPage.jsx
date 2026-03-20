@@ -108,8 +108,8 @@ export default function GoalsPage({
                                     </div>
                                 )}
 
-                                {isExpanded && (
-                                    <div className="mt-3">
+                                <div className="mt-3">
+                                    {isExpanded && tasks.length > 0 && (
                                         <div className="space-y-2 mb-3">
                                             {tasks.map((task) => (
                                                 <div
@@ -137,30 +137,30 @@ export default function GoalsPage({
                                                 </div>
                                             ))}
                                         </div>
+                                    )}
 
-                                        <div className="flex flex-col sm:flex-row gap-2">
-                                            <input
-                                                type="text"
-                                                value={tinyInputs[goal.id] || ""}
-                                                onChange={(e) =>
-                                                    setTinyInputs((prev) => ({ ...prev, [goal.id]: e.target.value }))
-                                                }
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Enter") addTinyTask(goal.id);
-                                                }}
-                                                placeholder="Add tiny step (2-10 minutes)"
-                                                className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                            />
-                                            <button
-                                                onClick={() => addTinyTask(goal.id)}
-                                                disabled={!(tinyInputs[goal.id] || "").trim()}
-                                                className="rounded-xl bg-slate-900 px-4 py-2 text-white text-sm font-medium disabled:opacity-40"
-                                            >
-                                                Add step
-                                            </button>
-                                        </div>
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                        <input
+                                            type="text"
+                                            value={tinyInputs[goal.id] || ""}
+                                            onChange={(e) =>
+                                                setTinyInputs((prev) => ({ ...prev, [goal.id]: e.target.value }))
+                                            }
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") addTinyTask(goal.id);
+                                            }}
+                                            placeholder="Add tiny step (2-10 minutes)"
+                                            className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        />
+                                        <button
+                                            onClick={() => addTinyTask(goal.id)}
+                                            disabled={!(tinyInputs[goal.id] || "").trim()}
+                                            className="rounded-xl bg-slate-900 px-4 py-2 text-white text-sm font-medium disabled:opacity-40"
+                                        >
+                                            Add step
+                                        </button>
                                     </div>
-                                )}
+                                </div>
                             </div>
                         );
                     })}
