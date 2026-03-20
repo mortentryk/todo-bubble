@@ -98,22 +98,40 @@ export default function BattlePage({
         if (!m1 || !m2) return null;
 
         const roundNumber = roundIdx + 1;
+        const moveLabel1 = getMove(m1)?.label || "Unknown";
+        const moveLabel2 = getMove(m2)?.label || "Unknown";
 
         // Different picks: normal RPS
         if (m1 !== m2) {
             const winnerSide = rpsWinner(m1, m2); // "p1" | "p2" | null
-            if (!winnerSide) return { winner: null, pointAwarded: false, text: `Round ${roundNumber} draw!` };
+            if (!winnerSide) {
+                return {
+                    winner: null,
+                    pointAwarded: false,
+                    text: `Round ${roundNumber} draw!`,
+                    moveLabel1,
+                    moveLabel2
+                };
+            }
             const winnerName = winnerSide === "p1" ? player1 : player2;
             return {
                 winner: winnerSide,
                 pointAwarded: true,
-                text: `${winnerName} wins round ${roundNumber}!`
+                text: `${winnerName} wins round ${roundNumber}!`,
+                moveLabel1,
+                moveLabel2
             };
         }
 
         // Same pick: higher XP wins; equal XP => round draw (no points)
         if (xp1 === xp2) {
-            return { winner: null, pointAwarded: false, text: `Round ${roundNumber} draw!` };
+            return {
+                winner: null,
+                pointAwarded: false,
+                text: `Round ${roundNumber} draw!`,
+                moveLabel1,
+                moveLabel2
+            };
         }
 
         const p1Higher = xp1 > xp2;
@@ -122,7 +140,9 @@ export default function BattlePage({
         return {
             winner: winnerSide,
             pointAwarded: true,
-            text: `${winnerName} wins round ${roundNumber}!`
+            text: `${winnerName} wins round ${roundNumber}!`,
+            moveLabel1,
+            moveLabel2
         };
     };
 
@@ -498,6 +518,12 @@ export default function BattlePage({
                                             {roundStage === "show" && roundOutcome?.text ? (
                                                 <>
                                                     <div className="mt-2 text-sm font-bold text-slate-900">{roundOutcome.text}</div>
+                                                    <div className="mt-1 text-xs text-slate-600">
+                                                        {player1} chose {roundOutcome.moveLabel1}
+                                                    </div>
+                                                    <div className="text-xs text-slate-600">
+                                                        {player2} chose {roundOutcome.moveLabel2}
+                                                    </div>
                                                     <button
                                                         onClick={goToNextRoundOrFinish}
                                                         className="mt-2 rounded-xl bg-slate-900 text-white px-3 py-1.5 text-xs font-semibold hover:bg-slate-800 active:scale-95 transition-transform"
