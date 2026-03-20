@@ -293,6 +293,8 @@ export default function BubbleTodoApp() {
         setHistory((prev) => [...prev, historyEntry]);
 
         const xpGain = item.score || 5;
+        // Open XP UI when awarding experience for a completed bubble.
+        setShowAvatar(true);
         setAvatarProfiles((prev) => {
             const existing = prev[activeUser] || {
                 xp: 0,
@@ -394,6 +396,7 @@ export default function BubbleTodoApp() {
     };
 
     const toggleTinyTaskDone = (taskId) => {
+        setShowAvatar(true);
         setTinyTasks((prev) =>
             prev.map((task) => (task.id === taskId ? { ...task, done: !task.done } : task))
         );
