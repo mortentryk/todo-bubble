@@ -1,5 +1,13 @@
 import React, { useMemo, useState } from "react";
-import { CheckCircle2, Circle, Send, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
+import {
+    CheckCircle2,
+    Circle,
+    Sparkles,
+    ChevronDown,
+    ChevronRight,
+    Plus,
+    MessageCircle
+} from "lucide-react";
 
 export default function GoalsPage({
     goals,
@@ -128,37 +136,48 @@ export default function GoalsPage({
                                                     </span>
                                                     <button
                                                         onClick={() => onSendTinyTaskToBubble(task.id)}
-                                                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
-                                                        title="Send to bubble board"
+                                                        className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 hover:bg-sky-100 transition-colors"
+                                                        title="Send tiny step to bubble board"
                                                     >
-                                                        <Send size={13} />
-                                                        Send
+                                                        <MessageCircle size={13} />
+                                                        Bubble
                                                     </button>
                                                 </div>
                                             ))}
                                         </div>
                                     )}
 
-                                    <div className="flex flex-col sm:flex-row gap-2">
-                                        <input
-                                            type="text"
-                                            value={tinyInputs[goal.id] || ""}
-                                            onChange={(e) =>
-                                                setTinyInputs((prev) => ({ ...prev, [goal.id]: e.target.value }))
-                                            }
-                                            onKeyDown={(e) => {
-                                                if (e.key === "Enter") addTinyTask(goal.id);
-                                            }}
-                                            placeholder="Add tiny step (2-10 minutes)"
-                                            className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        />
-                                        <button
-                                            onClick={() => addTinyTask(goal.id)}
-                                            disabled={!(tinyInputs[goal.id] || "").trim()}
-                                            className="rounded-xl bg-slate-900 px-4 py-2 text-white text-sm font-medium disabled:opacity-40"
-                                        >
-                                            Add step
-                                        </button>
+                                    <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-3">
+                                        <div className="flex items-center justify-between gap-2 mb-2">
+                                            <div className="flex items-center gap-2 text-slate-700">
+                                                <Sparkles size={16} className="text-sky-600" />
+                                                <span className="text-sm font-semibold">Add tiny step</span>
+                                            </div>
+                                            <span className="hidden sm:inline text-xs text-slate-500">2-10 minutes</span>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <input
+                                                type="text"
+                                                value={tinyInputs[goal.id] || ""}
+                                                onChange={(e) =>
+                                                    setTinyInputs((prev) => ({ ...prev, [goal.id]: e.target.value }))
+                                                }
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") addTinyTask(goal.id);
+                                                }}
+                                                placeholder="e.g. 5-minute tidy"
+                                                className="flex-1 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                            />
+                                            <button
+                                                onClick={() => addTinyTask(goal.id)}
+                                                disabled={!(tinyInputs[goal.id] || "").trim()}
+                                                className="rounded-xl bg-sky-700 hover:bg-sky-800 px-4 py-2 text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
+                                            >
+                                                <Plus size={16} />
+                                                Add tiny step
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
