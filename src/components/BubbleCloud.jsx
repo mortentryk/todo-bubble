@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import FloatingBubble from "./FloatingBubble";
 
-export default function BubbleCloud({ items, popItem, removeItem, renameItem, setItems, floatMode }) {
+export default function BubbleCloud({ items, popItem, removeItem, renameItem, setItems, floatMode, now, onStartTimer }) {
     const containerRef = useRef(null);
 
     // --- FLOAT PHYSICS ---
@@ -109,9 +109,13 @@ export default function BubbleCloud({ items, popItem, removeItem, renameItem, se
                                         score={it.score}
                                         isWeekly={it.isWeekly}
                                         color={it.color}
+                                        timerEndsAt={it.timerEndsAt}
+                                        timerDurationMs={it.timerDurationMs}
+                                        now={now}
                                         onPop={() => popItem(it.id)}
                                         onRemove={() => removeItem(it.id)}
                                         onRename={(t) => renameItem(it.id, t)}
+                                        onStartTimer={() => onStartTimer(it.id)}
                                     />
                                 </motion.div>
                             );

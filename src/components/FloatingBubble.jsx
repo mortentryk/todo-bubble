@@ -1,13 +1,40 @@
 import React, { useState, useEffect } from "react";
 import { motion, useAnimation } from "framer-motion";
-import { Edit3, Trash2, Star, Calendar } from "lucide-react";
+import { Edit3, Trash2, Star, Calendar, Timer } from "lucide-react";
 
-export default function FloatingBubble({ text, onPop, onRename, onRemove, score, isWeekly }) {
+export default function FloatingBubble({
+    text,
+    onPop,
+    onRename,
+    onRemove,
+    score,
+    isWeekly,
+    timerEndsAt,
+    timerDurationMs,
+    now,
+    onStartTimer
+}) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(text);
     const [isHovered, setIsHovered] = useState(false);
     const [isTouchDevice, setIsTouchDevice] = useState(false);
     useEffect(() => setDraft(text), [text]);
+
+    const nowMs = typeof now === "number" ? now : Date.now();
+    const hasTimer = typeof timerEndsAt === "number";
+    const remainingMs = hasTimer ? timerEndsAt - nowMs : null;
+    const remainingSec = remainingMs != null ? Math.max(0, Math.ceil(remainingMs / 1000)) : null;
+    const isTimerRunning = remainingMs != null && remainingMs > 0;
+    const durationMinutes =
+        typeof timerDurationMs === "number" && timerDurationMs > 0
+            ? Math.max(1, Math.round(timerDurationMs / (60 * 1000)))
+            : 20;
+
+    const formatRemaining = (sec) => {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    };
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -134,6 +161,20 @@ export default function FloatingBubble({ text, onPop, onRename, onRemove, score,
                                 {text}
                             </span>
 
+                            {hasTimer && remainingSec != null && (
+                                <div
+                                    className={
+                                        "px-2 py-0.5 rounded-full text-[11px] font-bold border shadow-sm " +
+                                        (isTimerRunning
+                                            ? "bg-sky-50 text-sky-800 border-sky-200"
+                                            : "bg-red-50 text-red-700 border-red-200")
+                                    }
+                                    title={isTimerRunning ? `${durationMinutes}-minute timer running` : "Timer finished"}
+                                >
+                                    {formatRemaining(remainingSec)}
+                                </div>
+                            )}
+
                             {/* Score and Weekly badges */}
                             {(score && score !== 5) || isWeekly ? (
                                 <div className="flex gap-1.5 items-center">
@@ -175,6 +216,16 @@ export default function FloatingBubble({ text, onPop, onRename, onRemove, score,
                         whileTap={{ scale: 0.9 }}
                     >
                         <Edit3 size={14} className="text-blue-600" />
+                    </motion.button>
+                    <motion.button
+                        onClick={() => onStartTimer?.()}
+                        className="inline-flex items-center justify-center rounded-full bg-white shadow-lg border border-sky-300 p-1.5 hover:bg-sky-50 transition-colors"
+                        title={isTimerRunning ? `Add ${durationMinutes} minutes` : `Start ${durationMinutes}-minute timer`}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        aria-label="Start focus timer"
+                    >
+                        <Timer size={14} className={isTimerRunning ? "text-sky-700" : "text-sky-600"} />
                     </motion.button>
                     <motion.button
                         onClick={onRemove}

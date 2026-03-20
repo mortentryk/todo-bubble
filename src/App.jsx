@@ -29,6 +29,9 @@ export default function BubbleTodoApp() {
         }
     });
 
+    const DEFAULT_FOCUS_MINUTES = 20;
+    const [now, setNow] = useState(Date.now());
+
     const [history, setHistory] = useState(() => {
         try {
             const raw = localStorage.getItem(HISTORY_KEY);
@@ -175,6 +178,35 @@ export default function BubbleTodoApp() {
     useEffect(() => {
         if (activeUser) ensureAvatarProfile(activeUser);
     }, [activeUser]);
+
+    // Keep "now" fresh only while we're on the bubbles view.
+    // (Timer display doesn't need to tick in the other views.)
+    useEffect(() => {
+        if (currentView !== "bubbles") return;
+        const t = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(t);
+    }, [currentView]);
+
+    const startTimerForItem = (id, minutes = DEFAULT_FOCUS_MINUTES) => {
+        const addMs = Math.max(1, minutes) * 60 * 1000;
+        const nowMs = Date.now();
+
+        setItems((prev) =>
+            prev.map((it) => {
+                if (it.id !== id) return it;
+
+                const existingEndsAt = typeof it.timerEndsAt === "number" ? it.timerEndsAt : null;
+                const stillActive = typeof existingEndsAt === "number" && existingEndsAt > nowMs;
+                const base = stillActive ? existingEndsAt : nowMs;
+
+                return {
+                    ...it,
+                    timerEndsAt: base + addMs,
+                    timerDurationMs: addMs
+                };
+            })
+        );
+    };
 
     // Check for weekly tasks to respawn
     useEffect(() => {
@@ -440,6 +472,8 @@ export default function BubbleTodoApp() {
                         renameItem={renameItem}
                         setItems={setItems}
                         floatMode={floatMode}
+                        now={now}
+                        onStartTimer={startTimerForItem}
                     />
                 ) : (
                     <GoalsPage
