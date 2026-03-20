@@ -7,6 +7,7 @@ import RewardsModal from "./components/RewardsModal";
 import UserSelector from "./components/UserSelector";
 import GoalsPage from "./components/GoalsPage";
 import AvatarCard from "./components/AvatarCard";
+import BattlePage from "./components/BattlePage";
 import { randomPastel, uid, getLevelProgress, getAvatarByLevel } from "./utils/helpers";
 
 const STORAGE_KEY = "bubbleTodos.v3";
@@ -367,6 +368,47 @@ export default function BubbleTodoApp() {
 
     const activeAvatarProfile = activeUser ? avatarProfiles[activeUser] : null;
 
+    const applyBattleResultToAvatars = ({ player1, player2, winner, loser, isDraw }) => {
+        if (!player1 || !player2) return;
+        if (isDraw) return;
+
+        setAvatarProfiles((prev) => {
+            const ensureProfile = (name) => {
+                if (!name) return null;
+                if (prev[name]) return prev[name];
+                return {
+                    xp: 0,
+                    level: 1,
+                    mood: "happy",
+                    lastFedAt: Date.now()
+                };
+            };
+
+            const pWinner = ensureProfile(winner);
+            const pLoser = ensureProfile(loser);
+            if (!winner || !loser || !pWinner || !pLoser) return prev;
+
+            const winnerXp = Math.max(0, pWinner.xp + 10);
+            const loserXp = Math.max(0, pLoser.xp - 5);
+
+            return {
+                ...prev,
+                [winner]: {
+                    ...pWinner,
+                    xp: winnerXp,
+                    level: getLevelProgress(winnerXp).level
+                },
+                [loser]: {
+                    ...pLoser,
+                    xp: loserXp,
+                    level: getLevelProgress(loserXp).level
+                }
+            };
+        });
+
+        setShowAvatar(true);
+    };
+
     const addGoal = (title) => {
         const trimmed = title.trim();
         if (!trimmed) return;
@@ -443,6 +485,16 @@ export default function BubbleTodoApp() {
                             Goals
                         </button>
                         <button
+                            onClick={() => setCurrentView("battle")}
+                            className={`flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-full shadow-sm hover:shadow transition-all font-medium text-sm ${currentView === "battle"
+                                    ? "bg-slate-900 text-white"
+                                    : "bg-white/80 hover:bg-white text-slate-600"
+                                }`}
+                        >
+                            <Trophy size={16} className={currentView === "battle" ? "text-yellow-300" : "text-yellow-500"} />
+                            Battle
+                        </button>
+                        <button
                             onClick={() => setShowStats(true)}
                             className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white shadow-sm hover:shadow transition-all text-slate-600 font-medium text-sm"
                         >
@@ -456,7 +508,7 @@ export default function BubbleTodoApp() {
                             <Gift size={16} />
                             Rewards
                         </button>
-                        {currentView === "goals" && (
+                        {(currentView === "goals" || currentView === "battle") && (
                             <button
                                 onClick={() => setCurrentView("bubbles")}
                                 className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white shadow-sm hover:shadow transition-all text-slate-600 font-medium text-sm"
@@ -477,6 +529,15 @@ export default function BubbleTodoApp() {
                         floatMode={floatMode}
                         now={now}
                         onStartTimer={startTimerForItem}
+                    />
+                ) : currentView === "battle" ? (
+                    <BattlePage
+                        users={users}
+                        activeUser={activeUser}
+                        avatarProfiles={avatarProfiles}
+                        getProgress={getLevelProgress}
+                        getAvatarName={getAvatarByLevel}
+                        onApplyBattleResult={applyBattleResultToAvatars}
                     />
                 ) : (
                     <GoalsPage
