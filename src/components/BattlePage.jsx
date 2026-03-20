@@ -45,9 +45,10 @@ export default function BattlePage({
     const [moves2, setMoves2] = useState([null, null, null]);
     const [phase, setPhase] = useState("picking"); // picking | fighting | result
     const [roundIndex, setRoundIndex] = useState(0);
-    const [roundStage, setRoundStage] = useState("clash"); // clash | show
+    const [roundStage, setRoundStage] = useState("ready"); // ready | clash | show
     const [roundOutcome, setRoundOutcome] = useState(null); // { winner:'p1'|'p2'|null, isDraw:boolean, text:string }
     const [matchResult, setMatchResult] = useState(null); // { winner:'p1'|'p2'|null, p1Wins:number, p2Wins:number, isDraw:boolean, text:string }
+    const [preparedMatch, setPreparedMatch] = useState(null);
 
     const fightTimeoutRef = useRef([]);
 
@@ -74,9 +75,10 @@ export default function BattlePage({
         setMoves2([null, null, null]);
         setPhase("picking");
         setRoundIndex(0);
-        setRoundStage("clash");
+        setRoundStage("ready");
         setRoundOutcome(null);
         setMatchResult(null);
+        setPreparedMatch(null);
         matchKeyRef.current = null;
     }, [activeUser, users]);
 
@@ -90,13 +92,7 @@ export default function BattlePage({
 
     const matchKeyRef = useRef(null);
 
-    const roundDurations = useMemo(() => {
-        // Tuned for “video recording”: short clash motion, then show outcome.
-        return {
-            clashMs: 650,
-            outcomeMs: 350
-        };
-    }, []);
+    const roundDurations = useMemo(() => ({ clashMs: 900 }), []);
 
     const resolveRound = (m1, m2, roundIdx) => {
         if (!m1 || !m2) return null;
@@ -151,70 +147,13 @@ export default function BattlePage({
         const p2Wins = rounds.filter((r) => r?.pointAwarded && r.winner === "p2").length;
 
         const matchWinnerSide = p1Wins > p2Wins ? "p1" : p2Wins > p1Wins ? "p2" : null;
-        const matchWinnerName = matchWinnerSide === "p1" ? player1 : matchWinnerSide === "p2" ? player2 : null;
-        const matchLoserName = matchWinnerSide === "p1" ? player2 : matchWinnerSide === "p2" ? player1 : null;
 
         setPhase("fighting");
         setRoundIndex(0);
-        setRoundStage("clash");
+        setRoundStage("ready");
         setRoundOutcome(null);
         setMatchResult(null);
-
-        // Schedule 3 mini-clashes sequentially
-        const totalRoundsMs = 3 * (roundDurations.clashMs + roundDurations.outcomeMs);
-
-        fightTimeoutRef.current.forEach((t) => window.clearTimeout(t));
-        fightTimeoutRef.current = [];
-
-        [0, 1, 2].forEach((i) => {
-            fightTimeoutRef.current.push(
-                window.setTimeout(() => {
-                    setRoundIndex(i);
-                    setRoundStage("clash");
-                    setRoundOutcome(null);
-                }, i * (roundDurations.clashMs + roundDurations.outcomeMs))
-            );
-
-            fightTimeoutRef.current.push(
-                window.setTimeout(() => {
-                    setRoundOutcome(rounds[i]);
-                    setRoundStage("show");
-                }, i * (roundDurations.clashMs + roundDurations.outcomeMs) + roundDurations.clashMs)
-            );
-        });
-
-        fightTimeoutRef.current.push(
-            window.setTimeout(() => {
-                const isMatchDraw = matchWinnerSide === null;
-                if (!isMatchDraw) {
-                    onApplyBattleResult({
-                        player1,
-                        player2,
-                        winner: matchWinnerName,
-                        loser: matchLoserName,
-                        isDraw: false
-                    });
-                } else {
-                    // Keep UI consistent; no XP update will happen in App for draws.
-                    onApplyBattleResult({
-                        player1,
-                        player2,
-                        winner: null,
-                        loser: null,
-                        isDraw: true
-                    });
-                }
-
-                setMatchResult({
-                    winner: matchWinnerSide,
-                    isDraw: isMatchDraw,
-                    p1Wins,
-                    p2Wins,
-                    text: isMatchDraw ? "Match draw!" : `${matchWinnerName} wins the match!`
-                });
-                setPhase("result");
-            }, totalRoundsMs)
-        );
+        setPreparedMatch({ rounds, p1Wins, p2Wins, matchWinnerSide });
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
@@ -240,9 +179,10 @@ export default function BattlePage({
         setMoves2([null, null, null]);
         setPhase("picking");
         setRoundIndex(0);
-        setRoundStage("clash");
+        setRoundStage("ready");
         setRoundOutcome(null);
         setMatchResult(null);
+        setPreparedMatch(null);
     };
 
     const pickMove = (slotIndex, moveId, who) => {
@@ -255,6 +195,74 @@ export default function BattlePage({
         }
         if (moves2[slotIndex]) return; // hide/lock once chosen
         setMoves2((prev) => prev.map((m, i) => (i === slotIndex ? moveId : m)));
+    };
+
+    const finishMatch = () => {
+        if (!preparedMatch) return;
+
+        const { p1Wins, p2Wins, matchWinnerSide } = preparedMatch;
+        const isMatchDraw = matchWinnerSide === null;
+        const matchWinnerName = matchWinnerSide === "p1" ? player1 : matchWinnerSide === "p2" ? player2 : null;
+        const matchLoserName = matchWinnerSide === "p1" ? player2 : matchWinnerSide === "p2" ? player1 : null;
+
+        if (!isMatchDraw) {
+            onApplyBattleResult({
+                player1,
+                player2,
+                winner: matchWinnerName,
+                loser: matchLoserName,
+                isDraw: false
+            });
+        } else {
+            onApplyBattleResult({
+                player1,
+                player2,
+                winner: null,
+                loser: null,
+                isDraw: true
+            });
+        }
+
+        setMatchResult({
+            winner: matchWinnerSide,
+            isDraw: isMatchDraw,
+            p1Wins,
+            p2Wins,
+            text: isMatchDraw ? "Match draw!" : `${matchWinnerName} wins the match!`
+        });
+        setPhase("result");
+    };
+
+    const startCurrentRound = () => {
+        if (!preparedMatch) return;
+        if (phase !== "fighting") return;
+        if (roundStage !== "ready") return;
+
+        const round = preparedMatch.rounds[roundIndex];
+        setRoundStage("clash");
+        setRoundOutcome(null);
+
+        if (fightTimeoutRef.current?.length) {
+            fightTimeoutRef.current.forEach((t) => window.clearTimeout(t));
+        }
+        fightTimeoutRef.current = [];
+
+        const t = window.setTimeout(() => {
+            setRoundOutcome(round);
+            setRoundStage("show");
+        }, roundDurations.clashMs);
+        fightTimeoutRef.current.push(t);
+    };
+
+    const goToNextRoundOrFinish = () => {
+        if (!preparedMatch) return;
+        if (roundIndex < 2) {
+            setRoundIndex((prev) => prev + 1);
+            setRoundStage("ready");
+            setRoundOutcome(null);
+            return;
+        }
+        finishMatch();
     };
 
     const p1Card = (
@@ -488,7 +496,22 @@ export default function BattlePage({
                                             </div>
 
                                             {roundStage === "show" && roundOutcome?.text ? (
-                                                <div className="mt-2 text-sm font-bold text-slate-900">{roundOutcome.text}</div>
+                                                <>
+                                                    <div className="mt-2 text-sm font-bold text-slate-900">{roundOutcome.text}</div>
+                                                    <button
+                                                        onClick={goToNextRoundOrFinish}
+                                                        className="mt-2 rounded-xl bg-slate-900 text-white px-3 py-1.5 text-xs font-semibold hover:bg-slate-800 active:scale-95 transition-transform"
+                                                    >
+                                                        {roundIndex < 2 ? `Start round ${roundIndex + 2}` : "Show winner"}
+                                                    </button>
+                                                </>
+                                            ) : roundStage === "ready" ? (
+                                                <button
+                                                    onClick={startCurrentRound}
+                                                    className="mt-2 rounded-xl bg-slate-900 text-white px-3 py-1.5 text-xs font-semibold hover:bg-slate-800 active:scale-95 transition-transform"
+                                                >
+                                                    Start round {roundIndex + 1}
+                                                </button>
                                             ) : (
                                                 <div className="mt-2 text-sm font-semibold text-slate-600">Clash!</div>
                                             )}
