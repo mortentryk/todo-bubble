@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Trophy, Gift, Goal } from "lucide-react";
+import { Plus, Trophy, Gift, Goal, BarChart3 } from "lucide-react";
 import BubbleCloud from "./components/BubbleCloud";
 import AddTodosModal from "./components/AddTodosModal";
 import StatsModal from "./components/StatsModal";
@@ -19,6 +19,31 @@ const PRIZES_KEY = "bubbleTodos.prizes";
 const GOALS_KEY = "bubbleTodos.goals.v1";
 const TINY_TASKS_KEY = "bubbleTodos.tinyTasks.v1";
 const AVATAR_KEY = "bubbleTodos.avatarProfiles";
+
+/** Battle currency used to unlock rewards. New / legacy profiles without `stars` get this once on load. */
+const STARTING_STARS = 0;
+const REWARD_UNLOCK_STARS = 50;
+
+function migrateAvatarProfiles(raw) {
+    if (!raw || typeof raw !== "object") return {};
+    const out = {};
+    for (const [name, v] of Object.entries(raw)) {
+        if (!v || typeof v !== "object") continue;
+        out[name] = {
+            ...v,
+            stars: typeof v.stars === "number" ? v.stars : STARTING_STARS
+        };
+    }
+    return out;
+}
+
+function safeSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+    } catch {
+        /* quota or unavailable */
+    }
+}
 
 export default function BubbleTodoApp() {
     const [items, setItems] = useState(() => {
@@ -93,6 +118,7 @@ export default function BubbleTodoApp() {
     const [showStats, setShowStats] = useState(false);
     const [showRewards, setShowRewards] = useState(false);
     const [showAvatar, setShowAvatar] = useState(false);
+    const [needUserHint, setNeedUserHint] = useState(false);
     const [currentView, setCurrentView] = useState("bubbles");
     const floatMode = true;
     const [goals, setGoals] = useState(() => {
@@ -121,44 +147,58 @@ export default function BubbleTodoApp() {
     });
 
     useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+        safeSetItem(STORAGE_KEY, JSON.stringify(items));
     }, [items]);
 
     useEffect(() => {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        safeSetItem(HISTORY_KEY, JSON.stringify(history));
     }, [history]);
 
     useEffect(() => {
-        localStorage.setItem(USERS_LIST_KEY, JSON.stringify(users));
+        safeSetItem(USERS_LIST_KEY, JSON.stringify(users));
     }, [users]);
 
     useEffect(() => {
-        if (activeUser) {
-            localStorage.setItem(USER_KEY, activeUser);
-        } else {
-            localStorage.removeItem(USER_KEY);
+        try {
+            if (activeUser) {
+                localStorage.setItem(USER_KEY, activeUser);
+            } else {
+                localStorage.removeItem(USER_KEY);
+            }
+        } catch {
+            /* ignore */
         }
     }, [activeUser]);
 
     useEffect(() => {
-        localStorage.setItem(WEEKLY_KEY, JSON.stringify(weeklyRegistry));
+        safeSetItem(WEEKLY_KEY, JSON.stringify(weeklyRegistry));
     }, [weeklyRegistry]);
 
     useEffect(() => {
-        localStorage.setItem(PRIZES_KEY, JSON.stringify(prizes));
+        safeSetItem(PRIZES_KEY, JSON.stringify(prizes));
     }, [prizes]);
 
     useEffect(() => {
-        localStorage.setItem(GOALS_KEY, JSON.stringify(goals));
+        safeSetItem(GOALS_KEY, JSON.stringify(goals));
     }, [goals]);
 
     useEffect(() => {
-        localStorage.setItem(TINY_TASKS_KEY, JSON.stringify(tinyTasks));
+        safeSetItem(TINY_TASKS_KEY, JSON.stringify(tinyTasks));
     }, [tinyTasks]);
 
     useEffect(() => {
-        localStorage.setItem(AVATAR_KEY, JSON.stringify(avatarProfiles));
+        safeSetItem(AVATAR_KEY, JSON.stringify(avatarProfiles));
     }, [avatarProfiles]);
+
+    useEffect(() => {
+        if (!needUserHint) return;
+        const t = window.setTimeout(() => setNeedUserHint(false), 4500);
+        return () => window.clearTimeout(t);
+    }, [needUserHint]);
+
+    useEffect(() => {
+        if (activeUser) setNeedUserHint(false);
+    }, [activeUser]);
 
     const ensureAvatarProfile = (name) => {
         if (!name) return;
@@ -170,7 +210,8 @@ export default function BubbleTodoApp() {
                     xp: 0,
                     level: 1,
                     mood: "happy",
-                    lastFedAt: Date.now()
+                    lastFedAt: Date.now(),
+                    stars: STARTING_STARS
                 }
             };
         });
@@ -239,7 +280,7 @@ export default function BubbleTodoApp() {
 
     // Bulk add from modal
     const addMany = (texts, options = {}) => {
-        const { score = 5, isWeekly = false } = options;
+        const { score = 1, isWeekly = false } = options;
         const now = Date.now();
 
         const newItems = texts
@@ -278,7 +319,7 @@ export default function BubbleTodoApp() {
         const item = items.find((it) => it.id === id);
         if (!item) return;
         if (!activeUser) {
-            window.alert("Select a user before popping bubbles.");
+            setNeedUserHint(true);
             return;
         }
 
@@ -304,12 +345,14 @@ export default function BubbleTodoApp() {
                 lastFedAt: Date.now()
             };
             const nextXp = existing.xp + xpGain;
+            const nextStars = (existing.stars ?? 0) + xpGain;
             return {
                 ...prev,
                 [activeUser]: {
                     ...existing,
                     xp: nextXp,
-                    level: getLevelProgress(nextXp).level
+                    level: getLevelProgress(nextXp).level,
+                    stars: nextStars
                 }
             };
         });
@@ -380,7 +423,8 @@ export default function BubbleTodoApp() {
                     xp: 0,
                     level: 1,
                     mood: "happy",
-                    lastFedAt: Date.now()
+                    lastFedAt: Date.now(),
+                    stars: STARTING_STARS
                 };
             };
 
@@ -388,20 +432,18 @@ export default function BubbleTodoApp() {
             const pLoser = ensureProfile(loser);
             if (!winner || !loser || !pWinner || !pLoser) return prev;
 
-            const winnerXp = Math.max(0, pWinner.xp + 10);
-            const loserXp = Math.max(0, pLoser.xp - 5);
+            const loserStars = Math.max(0, pLoser.stars ?? 0);
+            const winnerStars = Math.max(0, pWinner.stars ?? 0);
 
             return {
                 ...prev,
                 [winner]: {
                     ...pWinner,
-                    xp: winnerXp,
-                    level: getLevelProgress(winnerXp).level
+                    stars: winnerStars + loserStars
                 },
                 [loser]: {
                     ...pLoser,
-                    xp: loserXp,
-                    level: getLevelProgress(loserXp).level
+                    stars: 0
                 }
             };
         });
@@ -409,17 +451,40 @@ export default function BubbleTodoApp() {
         setShowAvatar(true);
     };
 
+    /** Returns a random prize label and resets the winner's stars for the next race. */
+    const claimUnlockedPrize = () => {
+        if (!activeUser || prizes.length === 0) return null;
+        let revealed = null;
+        setAvatarProfiles((prev) => {
+            const p = prev[activeUser];
+            if (!p) return prev;
+            const stars = p.stars ?? 0;
+            if (stars < REWARD_UNLOCK_STARS) return prev;
+            revealed = prizes[Math.floor(Math.random() * prizes.length)];
+            return {
+                ...prev,
+                [activeUser]: {
+                    ...p,
+                    stars: 0
+                }
+            };
+        });
+        return revealed;
+    };
+
     const addGoal = (title) => {
         const trimmed = title.trim();
-        if (!trimmed) return;
+        if (!trimmed) return undefined;
+        const id = uid();
         setGoals((prev) => [
             ...prev,
             {
-                id: uid(),
+                id,
                 title: trimmed,
                 createdAt: Date.now()
             }
         ]);
+        return id;
     };
 
     const addTinyTask = (goalId, text) => {
@@ -450,8 +515,13 @@ export default function BubbleTodoApp() {
         addMany([task.text], { score: 3, isWeekly: false });
     };
 
+    const removeTinyTask = (taskId) => {
+        setTinyTasks((prev) => prev.filter((t) => t.id !== taskId));
+    };
+
     return (
-        <div className="min-h-screen w-full bg-gradient-to-b from-sky-50 to-slate-100 text-slate-800 font-sans">
+
+<div className="min-h-screen w-full bg-gradient-to-b from-sky-50 to-slate-100 text-slate-800 font-sans">
             <div className="mx-auto max-w-5xl p-3 sm:p-6">
                 {/* Header / Controls */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
@@ -495,10 +565,12 @@ export default function BubbleTodoApp() {
                             Battle
                         </button>
                         <button
+                            type="button"
                             onClick={() => setShowStats(true)}
                             className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white shadow-sm hover:shadow transition-all text-slate-600 font-medium text-sm"
+                            aria-label="Open stats and leaderboard"
                         >
-                            <Trophy size={16} className="text-yellow-500" />
+                            <BarChart3 size={16} className="text-sky-600" />
                             Stats
                         </button>
                         <button
@@ -518,6 +590,22 @@ export default function BubbleTodoApp() {
                         )}
                     </div>
                 </div>
+
+                {needUserHint && currentView === "bubbles" && (
+                    <div
+                        className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 shadow-sm flex items-center justify-between gap-2"
+                        role="status"
+                    >
+                        <span>Select a user above before popping bubbles.</span>
+                        <button
+                            type="button"
+                            onClick={() => setNeedUserHint(false)}
+                            className="shrink-0 rounded-lg px-2 py-1 text-amber-800 hover:bg-amber-100 font-medium"
+                        >
+                            Dismiss
+                        </button>
+                    </div>
+                )}
 
                 {currentView === "bubbles" ? (
                     <BubbleCloud
@@ -547,17 +635,20 @@ export default function BubbleTodoApp() {
                         onAddTinyTask={addTinyTask}
                         onToggleTinyTaskDone={toggleTinyTaskDone}
                         onSendTinyTaskToBubble={sendTinyTaskToBubble}
+                        onRemoveTinyTask={removeTinyTask}
                     />
                 )}
 
                 {/* Floating Add button */}
                 {currentView === "bubbles" && (
                     <button
+                        type="button"
                         onClick={() => setShowModal(true)}
                         className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-3 sm:px-5 sm:py-4 text-white shadow-lg hover:shadow-xl active:scale-95 transition-transform z-40"
                         title="Add bubbles"
+                        aria-label="Add bubbles"
                     >
-                        <Plus size={18} /> Add
+                        <Plus size={18} aria-hidden /> Add
                     </button>
                 )}
 
@@ -576,16 +667,23 @@ export default function BubbleTodoApp() {
                     onClose={() => setShowStats(false)}
                     history={history}
                     activeUser={activeUser}
+                    avatarProfiles={avatarProfiles}
                 />
 
                 <RewardsModal
                     open={showRewards}
                     onClose={() => setShowRewards(false)}
-                    history={history}
                     activeUser={activeUser}
                     prizes={prizes}
                     onUpdatePrizes={setPrizes}
+                    starBalance={activeAvatarProfile?.stars ?? 0}
+                    unlockStars={REWARD_UNLOCK_STARS}
+                    onClaimPrize={claimUnlockedPrize}
                 />
+
+                <p className="mt-8 text-center text-xs text-slate-400 px-2">
+                    Try refreshing the page. Your data is stored in this browser.
+                </p>
             </div>
         </div>
     );
