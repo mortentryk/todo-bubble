@@ -49,6 +49,8 @@ export default function BattlePage({
     const [roundOutcome, setRoundOutcome] = useState(null); // { winner:'p1'|'p2'|null, isDraw:boolean, text:string }
     const [matchResult, setMatchResult] = useState(null); // { winner:'p1'|'p2'|null, p1Wins:number, p2Wins:number, isDraw:boolean, text:string }
     const [preparedMatch, setPreparedMatch] = useState(null);
+    const [showWinnerVideoModal, setShowWinnerVideoModal] = useState(false);
+    const [videoFallbackIndex, setVideoFallbackIndex] = useState(0);
 
     const fightTimeoutRef = useRef([]);
 
@@ -79,6 +81,7 @@ export default function BattlePage({
         setRoundOutcome(null);
         setMatchResult(null);
         setPreparedMatch(null);
+        setShowWinnerVideoModal(false);
         matchKeyRef.current = null;
     }, [activeUser, users]);
 
@@ -93,6 +96,16 @@ export default function BattlePage({
     const matchKeyRef = useRef(null);
 
     const roundDurations = useMemo(() => ({ clashMs: 900 }), []);
+
+    const getRoundVideoSources = (winnerSide) => {
+        if (winnerSide === "p1") {
+            return ["/Videos/godzillewins.mp4", "/Videos/Godzilla_Wins_Video_Generated.mp4"];
+        }
+        if (winnerSide === "p2") {
+            return ["/Videos/King_Kong_Wins_Video_Generated.mp4"];
+        }
+        return [];
+    };
 
     const resolveRound = (m1, m2, roundIdx) => {
         if (!m1 || !m2) return null;
@@ -203,6 +216,7 @@ export default function BattlePage({
         setRoundOutcome(null);
         setMatchResult(null);
         setPreparedMatch(null);
+        setShowWinnerVideoModal(false);
     };
 
     const pickMove = (slotIndex, moveId, who) => {
@@ -250,6 +264,8 @@ export default function BattlePage({
             p2Wins,
             text: isMatchDraw ? "Match draw!" : `${matchWinnerName} wins the match!`
         });
+        setVideoFallbackIndex(0);
+        setShowWinnerVideoModal(!isMatchDraw);
         setPhase("result");
     };
 
@@ -270,6 +286,7 @@ export default function BattlePage({
         const t = window.setTimeout(() => {
             setRoundOutcome(round);
             setRoundStage("show");
+            setVideoFallbackIndex(0);
         }, roundDurations.clashMs);
         fightTimeoutRef.current.push(t);
     };
@@ -585,6 +602,14 @@ export default function BattlePage({
                         {phase === "result" && matchResult && (
                             <div className="px-4 pb-4 sm:px-6">
                                 <div className="flex items-center justify-center gap-2">
+                                    {!matchResult.isDraw && (
+                                        <button
+                                            onClick={() => setShowWinnerVideoModal(true)}
+                                            className="rounded-xl bg-sky-700 text-white px-4 py-2 text-sm font-semibold hover:bg-sky-800 active:scale-95 transition-transform"
+                                        >
+                                            Show winner video
+                                        </button>
+                                    )}
                                     <button
                                         onClick={playAgain}
                                         className="rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800 active:scale-95 transition-transform"
@@ -597,6 +622,45 @@ export default function BattlePage({
                     </div>
                 )}
             </div>
+
+            {showWinnerVideoModal && phase === "result" && matchResult && !matchResult.isDraw && (
+                <div
+                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                    onClick={() => setShowWinnerVideoModal(false)}
+                >
+                    <div
+                        className="w-full max-w-4xl rounded-2xl overflow-hidden border border-slate-700 bg-black shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between px-4 py-3 bg-slate-900">
+                            <div className="text-sm font-semibold text-white">
+                                Winner video - {matchResult.winner === "p1" ? player1 : player2}
+                            </div>
+                            <button
+                                onClick={() => setShowWinnerVideoModal(false)}
+                                className="rounded-lg bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 text-xs font-semibold"
+                            >
+                                Close
+                            </button>
+                        </div>
+                        <video
+                            key={`winner-${matchResult.winner}-${videoFallbackIndex}`}
+                            src={getRoundVideoSources(matchResult.winner)[videoFallbackIndex]}
+                            autoPlay
+                            muted
+                            playsInline
+                            controls
+                            className="w-full max-h-[78vh] object-contain bg-black"
+                            onError={() => {
+                                const sources = getRoundVideoSources(matchResult.winner);
+                                if (videoFallbackIndex < sources.length - 1) {
+                                    setVideoFallbackIndex((prev) => prev + 1);
+                                }
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

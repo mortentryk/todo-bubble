@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Star } from "lucide-react";
 
@@ -35,6 +35,7 @@ export default function AddTodosModal({ open, onClose, onAdd }) {
             {open && (
                 <motion.div
                     key="backdrop"
+                    role="presentation"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -42,6 +43,9 @@ export default function AddTodosModal({ open, onClose, onAdd }) {
                     onClick={onClose}
                 >
                     <motion.div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="add-bubbles-title"
                         initial={{ y: 30, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 20, opacity: 0 }}
@@ -49,7 +53,7 @@ export default function AddTodosModal({ open, onClose, onAdd }) {
                         className="absolute left-1/2 top-1/2 w-[94vw] sm:w-[92vw] max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-4 sm:p-5 shadow-2xl border border-slate-200 max-h-[86vh] overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h2 className="text-lg font-semibold mb-3">Add bubbles</h2>
+                        <h2 id="add-bubbles-title" className="text-lg font-semibold mb-3">Add bubbles</h2>
                         <textarea
                             value={text}
                             onChange={(e) => setText(e.target.value)}

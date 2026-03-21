@@ -50,6 +50,7 @@ export default function RewardsModal({ open, onClose, history, activeUser, prize
             {open && (
                 <motion.div
                     key="backdrop"
+                    role="presentation"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -57,6 +58,9 @@ export default function RewardsModal({ open, onClose, history, activeUser, prize
                     onClick={onClose}
                 >
                     <motion.div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="rewards-title"
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.9, opacity: 0 }}
@@ -66,14 +70,16 @@ export default function RewardsModal({ open, onClose, history, activeUser, prize
                         {/* Header */}
                         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50">
                             <div className="flex items-center gap-2">
-                                <Gift className="text-purple-600" size={24} />
-                                <h2 className="text-xl font-bold text-slate-800">Rewards</h2>
+                                <Gift className="text-purple-600" size={24} aria-hidden />
+                                <h2 id="rewards-title" className="text-xl font-bold text-slate-800">Rewards</h2>
                             </div>
                             <button
+                                type="button"
                                 onClick={onClose}
                                 className="p-2 hover:bg-white/50 rounded-full transition-colors text-slate-400 hover:text-slate-600"
+                                aria-label="Close rewards"
                             >
-                                <X size={20} />
+                                <X size={20} aria-hidden />
                             </button>
                         </div>
 
