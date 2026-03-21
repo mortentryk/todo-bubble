@@ -52,7 +52,7 @@ export default function AddTodosModal({ open, onClose, onAdd }) {
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 20, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 320, damping: 28 }}
-                        className="absolute left-1/2 bottom-3 w-[94vw] sm:bottom-auto sm:top-1/2 sm:w-[92vw] max-w-xl -translate-x-1/2 sm:-translate-y-1/2 rounded-2xl bg-white p-4 sm:p-5 shadow-2xl border border-slate-200 max-h-[82dvh] sm:max-h-[86vh] overflow-y-auto"
+                        className="absolute inset-x-3 bottom-3 sm:left-1/2 sm:right-auto sm:bottom-auto sm:top-1/2 sm:w-[92vw] sm:max-w-xl sm:-translate-x-1/2 sm:-translate-y-1/2 rounded-2xl bg-white p-4 sm:p-5 shadow-2xl border border-slate-200 max-h-[82dvh] sm:max-h-[86vh] overflow-y-auto"
                         style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -61,12 +61,12 @@ export default function AddTodosModal({ open, onClose, onAdd }) {
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                             placeholder={"One per line (or comma-separated)\nExample:\nLaundry\nVacuum\nCall mom"}
-                            rows={5}
+                            rows={4}
                             className="w-full rounded-xl border border-slate-300 bg-white/80 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400 mb-4"
                         />
 
-                        <div className="flex flex-wrap gap-4 mb-4">
-                            <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+                        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+                            <div className="flex w-full items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 sm:w-auto">
                                 <Star size={16} className="text-yellow-500" />
                                 <span className="text-sm font-medium text-slate-600">Score:</span>
                                 <input
@@ -75,11 +75,11 @@ export default function AddTodosModal({ open, onClose, onAdd }) {
                                     max="100"
                                     value={score}
                                     onChange={(e) => setScore(parseInt(e.target.value) || 0)}
-                                    className="w-16 bg-white border border-slate-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                    className="ml-auto w-16 bg-white border border-slate-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                                 />
                             </div>
 
-                            <label className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors">
+                            <label className="flex w-full items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors sm:w-auto">
                                 <input
                                     type="checkbox"
                                     checked={isWeekly}
@@ -91,13 +91,13 @@ export default function AddTodosModal({ open, onClose, onAdd }) {
                             </label>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-sm text-slate-500 gap-2">
+                        <div className="flex flex-col gap-3 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                             <span>{lines.length} item{lines.length === 1 ? "" : "s"} ready</span>
-                            <div className="flex gap-2 w-full sm:w-auto">
-                                <button onClick={onClose} className="rounded-xl border border-slate-300 bg-white px-4 py-2 shadow-sm hover:bg-slate-50">Cancel</button>
+                            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+                                <button onClick={onClose} className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2 shadow-sm hover:bg-slate-50 sm:w-auto">Cancel</button>
                                 <button
                                     onClick={handleAdd}
-                                    className="rounded-xl bg-slate-900 px-4 py-2 text-white shadow hover:shadow-md disabled:opacity-40 flex-1 sm:flex-none"
+                                    className="w-full rounded-xl bg-slate-900 px-4 py-2 text-white shadow hover:shadow-md disabled:opacity-40 sm:w-auto"
                                     disabled={!lines.length}
                                 >
                                     Add {lines.length ? `(${lines.length})` : ""}
