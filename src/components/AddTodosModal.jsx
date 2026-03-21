@@ -52,7 +52,8 @@ export default function AddTodosModal({ open, onClose, onAdd }) {
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 20, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 320, damping: 28 }}
-                        className="absolute left-1/2 top-1/2 w-[94vw] sm:w-[92vw] max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-4 sm:p-5 shadow-2xl border border-slate-200 max-h-[86vh] overflow-y-auto"
+                        className="absolute left-1/2 bottom-3 w-[94vw] sm:bottom-auto sm:top-1/2 sm:w-[92vw] max-w-xl -translate-x-1/2 sm:-translate-y-1/2 rounded-2xl bg-white p-4 sm:p-5 shadow-2xl border border-slate-200 max-h-[82dvh] sm:max-h-[86vh] overflow-y-auto"
+                        style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <h2 id="add-bubbles-title" className="text-lg font-semibold mb-3">Add bubbles</h2>

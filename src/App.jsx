@@ -521,8 +521,8 @@ export default function BubbleTodoApp() {
 
     return (
 
-<div className="min-h-screen w-full bg-gradient-to-b from-sky-50 to-slate-100 text-slate-800 font-sans">
-            <div className="mx-auto max-w-5xl p-3 sm:p-6">
+<div className="min-h-dvh w-full bg-gradient-to-b from-sky-50 to-slate-100 text-slate-800 font-sans">
+            <div className="mx-auto max-w-5xl p-3 pb-24 sm:p-6 sm:pb-28">
                 {/* Header / Controls */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
                     <div className="w-full sm:max-w-lg flex flex-col gap-3">
@@ -543,10 +543,10 @@ export default function BubbleTodoApp() {
                         )}
                     </div>
 
-                    <div className="flex gap-2 w-full sm:w-auto">
+                    <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:flex-wrap md:flex-nowrap">
                         <button
                             onClick={() => setCurrentView("goals")}
-                            className={`flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-full shadow-sm hover:shadow transition-all font-medium text-sm ${currentView === "goals"
+                            className={`min-w-0 justify-center flex items-center gap-2 px-4 py-2 rounded-full shadow-sm hover:shadow transition-all font-medium text-sm ${currentView === "goals"
                                     ? "bg-slate-900 text-white"
                                     : "bg-white/80 hover:bg-white text-slate-600"
                                 }`}
@@ -556,7 +556,7 @@ export default function BubbleTodoApp() {
                         </button>
                         <button
                             onClick={() => setCurrentView("battle")}
-                            className={`flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-full shadow-sm hover:shadow transition-all font-medium text-sm ${currentView === "battle"
+                            className={`min-w-0 justify-center flex items-center gap-2 px-4 py-2 rounded-full shadow-sm hover:shadow transition-all font-medium text-sm ${currentView === "battle"
                                     ? "bg-slate-900 text-white"
                                     : "bg-white/80 hover:bg-white text-slate-600"
                                 }`}
@@ -567,7 +567,7 @@ export default function BubbleTodoApp() {
                         <button
                             type="button"
                             onClick={() => setShowStats(true)}
-                            className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white shadow-sm hover:shadow transition-all text-slate-600 font-medium text-sm"
+                            className="min-w-0 justify-center flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white shadow-sm hover:shadow transition-all text-slate-600 font-medium text-sm"
                             aria-label="Open stats and leaderboard"
                         >
                             <BarChart3 size={16} className="text-sky-600" />
@@ -575,7 +575,7 @@ export default function BubbleTodoApp() {
                         </button>
                         <button
                             onClick={() => setShowRewards(true)}
-                            className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-sm hover:shadow transition-all text-white font-medium text-sm"
+                            className="min-w-0 justify-center flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-sm hover:shadow transition-all text-white font-medium text-sm"
                         >
                             <Gift size={16} />
                             Rewards
@@ -583,7 +583,7 @@ export default function BubbleTodoApp() {
                         {(currentView === "goals" || currentView === "battle") && (
                             <button
                                 onClick={() => setCurrentView("bubbles")}
-                                className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white shadow-sm hover:shadow transition-all text-slate-600 font-medium text-sm"
+                                className="min-w-0 justify-center flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white shadow-sm hover:shadow transition-all text-slate-600 font-medium text-sm"
                             >
                                 Back
                             </button>
@@ -645,6 +645,7 @@ export default function BubbleTodoApp() {
                         type="button"
                         onClick={() => setShowModal(true)}
                         className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-3 sm:px-5 sm:py-4 text-white shadow-lg hover:shadow-xl active:scale-95 transition-transform z-40"
+                        style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
                         title="Add bubbles"
                         aria-label="Add bubbles"
                     >

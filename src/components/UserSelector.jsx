@@ -18,7 +18,7 @@ export default function UserSelector({ users, activeUser, onSelectUser, onAdd, o
     };
 
     return (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
             {/* User Chips */}
             {users.map((user) => {
                 const isSelected = activeUser === user;
@@ -45,7 +45,7 @@ export default function UserSelector({ users, activeUser, onSelectUser, onAdd, o
                         key={user}
                         onClick={handleClick}
                         className={`
-              flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all
+              max-w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all
               ${isSelected
                                 ? "bg-slate-800 text-white shadow-md scale-105"
                                 : "bg-white/60 text-slate-600 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200"}
@@ -54,7 +54,7 @@ export default function UserSelector({ users, activeUser, onSelectUser, onAdd, o
                         <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${isSelected ? "bg-white/20 text-white" : "bg-slate-200 text-slate-500"}`}>
                             <User size={10} />
                         </div>
-                        {user}
+                        <span className="min-w-0 truncate">{user}</span>
                     </button>
                 );
             })}
@@ -83,14 +83,14 @@ export default function UserSelector({ users, activeUser, onSelectUser, onAdd, o
                         animate={{ opacity: 1, width: "auto" }}
                         exit={{ opacity: 0, width: 0 }}
                         onSubmit={handleAdd}
-                        className="flex items-center gap-1 bg-white rounded-full pl-3 pr-1 py-1 shadow-sm border border-slate-200 overflow-hidden"
+                        className="flex w-full sm:w-auto items-center gap-1 bg-white rounded-full pl-3 pr-1 py-1 shadow-sm border border-slate-200 overflow-hidden"
                     >
                         <input
                             autoFocus
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
                             placeholder="Name..."
-                            className="w-24 text-sm bg-transparent border-none focus:ring-0 p-0 text-slate-700 placeholder:text-slate-400"
+                            className="min-w-0 flex-1 sm:w-24 text-sm bg-transparent border-none focus:ring-0 p-0 text-slate-700 placeholder:text-slate-400"
                         />
                         <button
                             type="submit"

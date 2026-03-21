@@ -91,14 +91,14 @@ export default function BubbleCloud({ items, popItem, removeItem, renameItem, se
         <div
             ref={containerRef}
             className={
-                "min-h-[62vh] sm:min-h-[70vh] rounded-3xl bg-cover bg-center p-2 sm:p-4 shadow-lg border border-slate-200 overflow-hidden " +
+                "min-h-[56dvh] sm:min-h-[62vh] lg:min-h-[70vh] rounded-3xl bg-cover bg-center p-2 sm:p-4 shadow-lg border border-slate-200 overflow-hidden " +
                 (floatMode ? "relative" : "")
             }
             style={{ backgroundImage: "url('/Videos/sarath-p-co9ncept-2k-final.jpg')" }}
         >
             <AnimatePresence>
                 {floatMode ? (
-                    <div className="relative w-full h-[62vh] sm:h-[70vh]">
+                    <div className="relative w-full h-[56dvh] sm:h-[62vh] lg:h-[70vh]">
                         {items.map((it) => {
                             const p = positionsRef.current[it.id];
                             const r = p?.r ?? radiusFor(it.text);
@@ -148,7 +148,7 @@ export default function BubbleCloud({ items, popItem, removeItem, renameItem, se
             </AnimatePresence>
 
             {items.length === 0 && (
-                <div className="flex items-center justify-center h-[44vh] sm:h-[50vh] text-slate-400 text-center px-4">
+                <div className="flex items-center justify-center h-[40dvh] sm:h-[44vh] lg:h-[50vh] text-slate-400 text-center px-4">
                     Click "Add" to create your first bubble!
                 </div>
             )}

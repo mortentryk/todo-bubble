@@ -26,10 +26,10 @@ export default function AvatarCard({ activeUser, profile, getAvatarName, getProg
 
     return (
         <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-                <div>
+            <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
                     <div className="text-xs uppercase tracking-wide text-slate-500">Avatar</div>
-                    <div className="text-sm font-semibold text-slate-800">{activeUser}</div>
+                    <div className="truncate text-sm font-semibold text-slate-800">{activeUser}</div>
                     <div className="text-xs text-slate-500">{avatarName}</div>
                 </div>
                 <div className="text-3xl leading-none" aria-label={avatarName} title={avatarName}>
@@ -37,9 +37,9 @@ export default function AvatarCard({ activeUser, profile, getAvatarName, getProg
                 </div>
             </div>
 
-            <div className="mt-3 flex items-center justify-between text-sm gap-2">
+            <div className="mt-3 flex flex-wrap items-center justify-between text-sm gap-2">
                 <span className="font-semibold text-slate-800">Level {progress.level}</span>
-                <span className="flex items-center gap-3 text-slate-500 shrink-0">
+                <span className="flex flex-wrap items-center gap-3 text-slate-500">
                     <span className="inline-flex items-center gap-1 text-amber-600 font-medium" title="Battle stars">
                         <Star size={14} className="fill-amber-400 text-amber-500 shrink-0" aria-hidden />
                         {stars}

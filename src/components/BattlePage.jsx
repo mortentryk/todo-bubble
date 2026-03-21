@@ -328,14 +328,14 @@ export default function BattlePage({
 
     return (
         <div className="min-h-[62vh] sm:min-h-[70vh] rounded-3xl bg-white/80 p-4 sm:p-5 shadow-lg border border-slate-200">
-            <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                     <h2 className="text-xl font-semibold text-slate-800">Avatar Battle</h2>
                     <p className="text-sm text-slate-500 mt-1">
                         Best of 3: pick 3 Rock/Paper/Scissors moves each. Chosen moves are Hidden; if moves match, higher XP wins the round.
                     </p>
                 </div>
-                <div className="text-xs text-slate-400 text-right">
+                <div className="text-xs text-slate-400 lg:text-right">
                     Win: <span className="font-semibold text-emerald-700">+10</span> XP, Loss:{" "}
                     <span className="font-semibold text-rose-700">-5</span> XP
                 </div>
@@ -343,7 +343,7 @@ export default function BattlePage({
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3">
-                    <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="text-sm font-semibold text-slate-700">Player 1</div>
                         <select
                             value={player1}
@@ -356,7 +356,7 @@ export default function BattlePage({
                                 }
                                 playAgain();
                             }}
-                            className="text-sm rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            className="w-full text-sm rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500 sm:w-auto"
                             aria-label="Select Player 1"
                         >
                             {users.map((u) => (
@@ -370,7 +370,7 @@ export default function BattlePage({
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3">
-                    <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="text-sm font-semibold text-slate-700">Player 2</div>
                         <select
                             value={player2}
@@ -383,7 +383,7 @@ export default function BattlePage({
                                 }
                                 playAgain();
                             }}
-                            className="text-sm rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            className="w-full text-sm rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500 sm:w-auto"
                             aria-label="Select Player 2"
                         >
                             {users
@@ -495,8 +495,8 @@ export default function BattlePage({
                             />
                         </div>
 
-                        <div className="px-4 py-6 sm:px-6 flex items-center justify-between gap-4">
-                            <div className="flex-1">
+                        <div className="flex flex-col gap-4 px-4 py-6 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="w-full lg:flex-1">
                                 <AnimatePresence>
                                     <motion.div
                                         key="p1-avatar"
@@ -514,7 +514,7 @@ export default function BattlePage({
                                 </AnimatePresence>
                             </div>
 
-                            <div className="flex-[0.4] text-center">
+                            <div className="w-full text-center lg:flex-[0.4]">
                                 <div className="text-xs text-slate-500 uppercase tracking-wider">
                                     Battle
                                 </div>
@@ -580,7 +580,7 @@ export default function BattlePage({
                                 </AnimatePresence>
                             </div>
 
-                            <div className="flex-1">
+                            <div className="w-full lg:flex-1">
                                 <AnimatePresence>
                                     <motion.div
                                         key="p2-avatar"

@@ -111,9 +111,9 @@ export default function GoalsPage({
 
                                 {nextStep ? (
                                     <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 flex items-center justify-between gap-3">
-                                        <div className="text-sm text-emerald-800 flex items-center gap-2">
+                                        <div className="min-w-0 text-sm text-emerald-800 flex items-center gap-2">
                                             <Sparkles size={14} />
-                                            Next step: {nextStep.text}
+                                            <span className="truncate">Next step: {nextStep.text}</span>
                                         </div>
                                     </div>
                                 ) : (
@@ -128,7 +128,7 @@ export default function GoalsPage({
                                             {tasks.map((task) => (
                                                 <div
                                                     key={task.id}
-                                                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 flex items-center gap-2"
+                                                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 flex flex-wrap items-center gap-2"
                                                 >
                                                     <button
                                                         onClick={() => onToggleTinyTaskDone(task.id)}
@@ -137,7 +137,7 @@ export default function GoalsPage({
                                                     >
                                                         {task.done ? <CheckCircle2 size={18} className="text-emerald-600" /> : <Circle size={18} />}
                                                     </button>
-                                                    <span className={`flex-1 text-sm ${task.done ? "text-slate-400 line-through" : "text-slate-700"}`}>
+                                                    <span className={`min-w-0 flex-1 text-sm ${task.done ? "text-slate-400 line-through" : "text-slate-700"}`}>
                                                         {task.text}
                                                     </span>
                                                     <button

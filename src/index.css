@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
+body,
+#root {
+    min-height: 100%;
+}
+
+body {
+    overflow-x: hidden;
+}
+
 @keyframes shimmer {
     0% {
         transform: translateX(-100%) translateY(-100%) rotate(45deg);
