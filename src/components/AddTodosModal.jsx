@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Star } from "lucide-react";
 
 export default function AddTodosModal({ open, onClose, onAdd }) {
     const [text, setText] = useState("");
-    const [score, setScore] = useState(5);
+    const [score, setScore] = useState(1);
     const [isWeekly, setIsWeekly] = useState(false);
 
     const lines = useMemo(() => {
@@ -17,18 +17,20 @@ export default function AddTodosModal({ open, onClose, onAdd }) {
     const handleAdd = () => {
         onAdd(lines, { score, isWeekly });
         setText("");
-        setScore(5);
+        setScore(1);
         setIsWeekly(false);
     };
 
     useEffect(() => {
         const onKey = (e) => {
             if (e.key === "Escape") onClose();
-            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleAdd();
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                handleAdd();
+            }
         };
         if (open) window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [open]);
+    }, [open, handleAdd, lines.length]);
 
     return (
         <AnimatePresence>
