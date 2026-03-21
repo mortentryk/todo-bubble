@@ -2,7 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, X, Star } from "lucide-react";
 
-export default function StatsModal({ open, onClose, history, activeUser }) {
+export default function StatsModal({ open, onClose, history, activeUser, avatarProfiles = {} }) {
     // Calculate stats
     const stats = history.reduce((acc, item) => {
         const name = item.poppedBy || "Anonymous";
@@ -14,15 +14,32 @@ export default function StatsModal({ open, onClose, history, activeUser }) {
         return acc;
     }, {});
 
-    const sortedStats = Object.entries(stats)
-        .sort((a, b) => b[1].score - a[1].score)
-        .map(([name, data]) => ({ name, ...data }));
+    const leaderboardNames = Array.from(
+        new Set([...Object.keys(avatarProfiles), ...Object.keys(stats)])
+    );
+
+    const leaderboardRows = leaderboardNames
+        .map((name) => {
+            const data = stats[name] || { count: 0, score: 0 };
+            return {
+                name,
+                count: data.count,
+                historyScore: data.score,
+                displayStars: avatarProfiles[name]?.stars ?? 0
+            };
+        })
+        .sort((a, b) => {
+            if (b.displayStars !== a.displayStars) return b.displayStars - a.displayStars;
+            if (b.count !== a.count) return b.count - a.count;
+            return b.historyScore - a.historyScore;
+        });
 
     return (
         <AnimatePresence>
             {open && (
                 <motion.div
                     key="backdrop"
+                    role="presentation"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -30,6 +47,9 @@ export default function StatsModal({ open, onClose, history, activeUser }) {
                     onClick={onClose}
                 >
                     <motion.div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="stats-leaderboard-title"
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.9, opacity: 0 }}
@@ -40,25 +60,27 @@ export default function StatsModal({ open, onClose, history, activeUser }) {
                         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                             <div className="flex items-center gap-2 text-slate-800">
                                 <Trophy className="text-yellow-500" size={24} />
-                                <h2 className="text-xl font-bold">Leaderboard</h2>
+                                <h2 id="stats-leaderboard-title" className="text-xl font-bold">Leaderboard</h2>
                             </div>
                             <button
+                                type="button"
                                 onClick={onClose}
                                 className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600"
+                                aria-label="Close stats"
                             >
-                                <X size={20} />
+                                <X size={20} aria-hidden />
                             </button>
                         </div>
 
                         {/* Content */}
                         <div className="p-6 max-h-[60vh] overflow-y-auto min-h-[300px]">
-                            {sortedStats.length === 0 ? (
+                            {leaderboardRows.length === 0 ? (
                                 <div className="text-center text-slate-400 py-8">
                                     No bubbles popped yet!
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    {sortedStats.map((user, index) => {
+                                    {leaderboardRows.map((user, index) => {
                                         const isSelected = activeUser === user.name;
                                         return (
                                             <div
@@ -88,7 +110,7 @@ export default function StatsModal({ open, onClose, history, activeUser }) {
                                                         : 'bg-white border-slate-100 text-slate-900'
                                                     }`}>
                                                     <Star size={14} className="text-yellow-500 fill-yellow-500" />
-                                                    {user.score}
+                                                    {user.displayStars}
                                                 </div>
                                             </div>
                                         );

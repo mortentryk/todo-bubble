@@ -1,4 +1,5 @@
 import React from "react";
+import { Star } from "lucide-react";
 
 const AVATAR_EMOJI = {
     Egg: "🥚",
@@ -18,6 +19,7 @@ export default function AvatarCard({ activeUser, profile, getAvatarName, getProg
     }
 
     const xp = profile?.xp || 0;
+    const stars = profile?.stars ?? 0;
     const progress = getProgress(xp);
     const avatarName = getAvatarName(progress.level);
     const avatarEmoji = AVATAR_EMOJI[avatarName] || "🥚";
@@ -28,15 +30,22 @@ export default function AvatarCard({ activeUser, profile, getAvatarName, getProg
                 <div>
                     <div className="text-xs uppercase tracking-wide text-slate-500">Avatar</div>
                     <div className="text-sm font-semibold text-slate-800">{activeUser}</div>
+                    <div className="text-xs text-slate-500">{avatarName}</div>
                 </div>
                 <div className="text-3xl leading-none" aria-label={avatarName} title={avatarName}>
                     {avatarEmoji}
                 </div>
             </div>
 
-            <div className="mt-3 flex items-center justify-between text-sm">
+            <div className="mt-3 flex items-center justify-between text-sm gap-2">
                 <span className="font-semibold text-slate-800">Level {progress.level}</span>
-                <span className="text-slate-500">{progress.currentXp} XP</span>
+                <span className="flex items-center gap-3 text-slate-500 shrink-0">
+                    <span className="inline-flex items-center gap-1 text-amber-600 font-medium" title="Battle stars">
+                        <Star size={14} className="fill-amber-400 text-amber-500 shrink-0" aria-hidden />
+                        {stars}
+                    </span>
+                    <span>{xp} XP</span>
+                </span>
             </div>
 
             <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">

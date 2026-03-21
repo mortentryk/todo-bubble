@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion, useAnimation } from "framer-motion";
+import { motion } from "framer-motion";
 import { Edit3, Trash2, Star, Calendar, Timer } from "lucide-react";
 
 export default function FloatingBubble({
@@ -49,28 +49,6 @@ export default function FloatingBubble({
         return () => mq.removeListener(apply);
     }, []);
 
-    // Gentle breathing animation
-    const controls = useAnimation();
-    useEffect(() => {
-        let mounted = true;
-        const loop = async () => {
-            while (mounted) {
-                await controls.start({
-                    scale: 1.02,
-                    transition: { duration: 3, ease: "easeInOut" }
-                });
-                await controls.start({
-                    scale: 0.98,
-                    transition: { duration: 3, ease: "easeInOut" }
-                });
-            }
-        };
-        loop();
-        return () => {
-            mounted = false;
-        };
-    }, [controls]);
-
     const commit = () => {
         const t = draft.trim();
         if (!t) return;
@@ -80,7 +58,8 @@ export default function FloatingBubble({
 
     return (
         <motion.div
-            animate={controls}
+            animate={{ scale: [1, 1.02, 0.98, 1] }}
+            transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
             className="relative"
             onHoverStart={() => setIsHovered(true)}
             onHoverEnd={() => setIsHovered(false)}

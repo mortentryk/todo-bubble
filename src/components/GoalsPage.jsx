@@ -6,7 +6,8 @@ import {
     ChevronDown,
     ChevronRight,
     Plus,
-    MessageCircle
+    MessageCircle,
+    Trash2
 } from "lucide-react";
 
 export default function GoalsPage({
@@ -15,7 +16,8 @@ export default function GoalsPage({
     onAddGoal,
     onAddTinyTask,
     onToggleTinyTaskDone,
-    onSendTinyTaskToBubble
+    onSendTinyTaskToBubble,
+    onRemoveTinyTask
 }) {
     const [goalTitle, setGoalTitle] = useState("");
     const [expandedGoals, setExpandedGoals] = useState({});
@@ -30,13 +32,17 @@ export default function GoalsPage({
     }, [tinyTasks]);
 
     const addGoal = () => {
-        onAddGoal(goalTitle);
+        const createdGoalId = onAddGoal(goalTitle);
+        if (createdGoalId) {
+            setExpandedGoals((prev) => ({ ...prev, [createdGoalId]: true }));
+        }
         setGoalTitle("");
     };
 
     const addTinyTask = (goalId) => {
         const nextTask = tinyInputs[goalId] || "";
         onAddTinyTask(goalId, nextTask);
+        setExpandedGoals((prev) => ({ ...prev, [goalId]: true }));
         setTinyInputs((prev) => ({ ...prev, [goalId]: "" }));
     };
 
@@ -141,6 +147,13 @@ export default function GoalsPage({
                                                     >
                                                         <MessageCircle size={13} />
                                                         Bubble
+                                                    </button>
+                                                    <button
+                                                        onClick={() => onRemoveTinyTask(task.id)}
+                                                        className="inline-flex items-center justify-center rounded-full border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 transition-colors"
+                                                        title="Delete tiny step"
+                                                    >
+                                                        <Trash2 size={13} />
                                                     </button>
                                                 </div>
                                             ))}
