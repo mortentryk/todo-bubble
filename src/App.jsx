@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Trophy, Gift, Goal, BarChart3 } from "lucide-react";
 import BubbleCloud from "./components/BubbleCloud";
 import AddTodosModal from "./components/AddTodosModal";
@@ -8,17 +8,16 @@ import UserSelector from "./components/UserSelector";
 import GoalsPage from "./components/GoalsPage";
 import AvatarCard from "./components/AvatarCard";
 import BattlePage from "./components/BattlePage";
+import AuthPanel from "./components/AuthPanel";
 import { randomPastel, uid, getLevelProgress, getAvatarByLevel } from "./utils/helpers";
-
-const STORAGE_KEY = "bubbleTodos.v3";
-const HISTORY_KEY = "bubbleTodos.history";
-const USER_KEY = "bubbleTodos.user";
-const USERS_LIST_KEY = "bubbleTodos.users";
-const WEEKLY_KEY = "bubbleTodos.weekly";
-const PRIZES_KEY = "bubbleTodos.prizes";
-const GOALS_KEY = "bubbleTodos.goals.v1";
-const TINY_TASKS_KEY = "bubbleTodos.tinyTasks.v1";
-const AVATAR_KEY = "bubbleTodos.avatarProfiles";
+import { isSupabaseConfigured, supabase } from "./lib/supabase";
+import {
+    getEmptyBubbleState,
+    loadSnapshotFromLocalStorage,
+    loadSnapshotForUser,
+    saveSnapshotToSupabase,
+    writeSnapshotToLocalStorage
+} from "./lib/bubblePersistence";
 
 /** Battle currency used to unlock rewards. New / legacy profiles without `stars` get this once on load. */
 const STARTING_STARS = 0;
@@ -37,83 +36,23 @@ function migrateAvatarProfiles(raw) {
     return out;
 }
 
-function safeSetItem(key, value) {
-    try {
-        localStorage.setItem(key, value);
-    } catch {
-        /* quota or unavailable */
+function initialBubbleState() {
+    if (!isSupabaseConfigured()) {
+        return loadSnapshotFromLocalStorage();
     }
+    return getEmptyBubbleState();
 }
 
 export default function BubbleTodoApp() {
-    const [items, setItems] = useState(() => {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            return raw ? JSON.parse(raw) : [];
-        } catch {
-            return [];
-        }
-    });
-
+    const boot = initialBubbleState();
+    const [items, setItems] = useState(() => boot.items);
     const DEFAULT_FOCUS_MINUTES = 20;
     const [now, setNow] = useState(Date.now());
-
-    const [history, setHistory] = useState(() => {
-        try {
-            const raw = localStorage.getItem(HISTORY_KEY);
-            return raw ? JSON.parse(raw) : [];
-        } catch {
-            return [];
-        }
-    });
-
-    const [activeUser, setActiveUser] = useState(() => {
-        const current = localStorage.getItem(USER_KEY);
-        return current || "";
-    });
-
-    const [users, setUsers] = useState(() => {
-        try {
-            const raw = localStorage.getItem(USERS_LIST_KEY);
-            const list = raw ? JSON.parse(raw) : [];
-            // Ensure current user is in the list
-            const current = localStorage.getItem(USER_KEY);
-            if (current && !list.includes(current)) {
-                list.push(current);
-            }
-            return list;
-        } catch {
-            return [];
-        }
-    });
-
-    const [weeklyRegistry, setWeeklyRegistry] = useState(() => {
-        try {
-            const raw = localStorage.getItem(WEEKLY_KEY);
-            return raw ? JSON.parse(raw) : [];
-        } catch {
-            return [];
-        }
-    });
-
-    const [prizes, setPrizes] = useState(() => {
-        try {
-            const raw = localStorage.getItem(PRIZES_KEY);
-            return raw ? JSON.parse(raw) : [
-                "Free Coffee ☕",
-                "High Five ✋",
-                "Bragging Rights 👑",
-                "10 Minute Break 🧘",
-                "Choose the Music 🎵",
-                "Sweet Treat 🍬",
-                "Early Finish 🏃",
-                "VIP Status 🌟"
-            ];
-        } catch {
-            return [];
-        }
-    });
-
+    const [history, setHistory] = useState(() => boot.history);
+    const [activeUser, setActiveUser] = useState(() => boot.activeUser);
+    const [users, setUsers] = useState(() => boot.users);
+    const [weeklyRegistry, setWeeklyRegistry] = useState(() => boot.weeklyRegistry);
+    const [prizes, setPrizes] = useState(() => boot.prizes);
     const [showModal, setShowModal] = useState(false);
     const [showStats, setShowStats] = useState(false);
     const [showRewards, setShowRewards] = useState(false);
@@ -121,74 +60,125 @@ export default function BubbleTodoApp() {
     const [needUserHint, setNeedUserHint] = useState(false);
     const [currentView, setCurrentView] = useState("bubbles");
     const floatMode = true;
-    const [goals, setGoals] = useState(() => {
-        try {
-            const raw = localStorage.getItem(GOALS_KEY);
-            return raw ? JSON.parse(raw) : [];
-        } catch {
-            return [];
-        }
-    });
-    const [tinyTasks, setTinyTasks] = useState(() => {
-        try {
-            const raw = localStorage.getItem(TINY_TASKS_KEY);
-            return raw ? JSON.parse(raw) : [];
-        } catch {
-            return [];
-        }
-    });
-    const [avatarProfiles, setAvatarProfiles] = useState(() => {
-        try {
-            const raw = localStorage.getItem(AVATAR_KEY);
-            return raw ? JSON.parse(raw) : {};
-        } catch {
-            return {};
-        }
-    });
+    const [goals, setGoals] = useState(() => boot.goals);
+    const [tinyTasks, setTinyTasks] = useState(() => boot.tinyTasks);
+    const [avatarProfiles, setAvatarProfiles] = useState(() =>
+        migrateAvatarProfiles(boot.avatarProfiles)
+    );
+
+    const [hydrated, setHydrated] = useState(() => !isSupabaseConfigured());
+    const [authReady, setAuthReady] = useState(() => !isSupabaseConfigured());
+    const [session, setSession] = useState(null);
+    const saveTimerRef = useRef(null);
+    const snapshotRef = useRef(null);
 
     useEffect(() => {
-        safeSetItem(STORAGE_KEY, JSON.stringify(items));
-    }, [items]);
+        if (!isSupabaseConfigured() || !supabase) return;
+        let cancelled = false;
+        supabase.auth.getSession().then(({ data: { session: s } }) => {
+            if (cancelled) return;
+            setSession(s);
+            setAuthReady(true);
+        });
+        const {
+            data: { subscription }
+        } = supabase.auth.onAuthStateChange((_event, s) => {
+            if (cancelled) return;
+            setSession(s);
+        });
+        return () => {
+            cancelled = true;
+            subscription.unsubscribe();
+        };
+    }, []);
+
+    const snapshot = useMemo(
+        () => ({
+            items,
+            history,
+            activeUser,
+            users,
+            weeklyRegistry,
+            prizes,
+            goals,
+            tinyTasks,
+            avatarProfiles
+        }),
+        [
+            items,
+            history,
+            activeUser,
+            users,
+            weeklyRegistry,
+            prizes,
+            goals,
+            tinyTasks,
+            avatarProfiles
+        ]
+    );
+
+    snapshotRef.current = snapshot;
+
+    const hydrationKey = `${session?.user?.id ?? "none"}:${session?.user?.is_anonymous ? "anon" : "auth"}`;
 
     useEffect(() => {
-        safeSetItem(HISTORY_KEY, JSON.stringify(history));
-    }, [history]);
-
-    useEffect(() => {
-        safeSetItem(USERS_LIST_KEY, JSON.stringify(users));
-    }, [users]);
-
-    useEffect(() => {
-        try {
-            if (activeUser) {
-                localStorage.setItem(USER_KEY, activeUser);
-            } else {
-                localStorage.removeItem(USER_KEY);
+        if (!isSupabaseConfigured() || !supabase) return;
+        if (!authReady) return;
+        let cancelled = false;
+        setHydrated(false);
+        (async () => {
+            const user = session?.user;
+            if (!user) {
+                const s = loadSnapshotFromLocalStorage();
+                if (cancelled) return;
+                setItems(s.items);
+                setHistory(s.history);
+                setActiveUser(s.activeUser);
+                setUsers(s.users);
+                setWeeklyRegistry(s.weeklyRegistry);
+                setPrizes(s.prizes);
+                setGoals(s.goals);
+                setTinyTasks(s.tinyTasks);
+                setAvatarProfiles(migrateAvatarProfiles(s.avatarProfiles));
+                setHydrated(true);
+                return;
             }
-        } catch {
-            /* ignore */
+            const seed = snapshotRef.current;
+            const { snapshot: snap } = await loadSnapshotForUser(user.id, seed);
+            if (cancelled) return;
+            setItems(snap.items);
+            setHistory(snap.history);
+            setActiveUser(snap.activeUser);
+            setUsers(snap.users);
+            setWeeklyRegistry(snap.weeklyRegistry);
+            setPrizes(snap.prizes);
+            setGoals(snap.goals);
+            setTinyTasks(snap.tinyTasks);
+            setAvatarProfiles(migrateAvatarProfiles(snap.avatarProfiles));
+            setHydrated(true);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [authReady, hydrationKey]);
+
+    useEffect(() => {
+        if (!hydrated) return;
+        if (!isSupabaseConfigured() || !supabase) {
+            writeSnapshotToLocalStorage(snapshot);
+            return;
         }
-    }, [activeUser]);
-
-    useEffect(() => {
-        safeSetItem(WEEKLY_KEY, JSON.stringify(weeklyRegistry));
-    }, [weeklyRegistry]);
-
-    useEffect(() => {
-        safeSetItem(PRIZES_KEY, JSON.stringify(prizes));
-    }, [prizes]);
-
-    useEffect(() => {
-        safeSetItem(GOALS_KEY, JSON.stringify(goals));
-    }, [goals]);
-
-    useEffect(() => {
-        safeSetItem(TINY_TASKS_KEY, JSON.stringify(tinyTasks));
-    }, [tinyTasks]);
-
-    useEffect(() => {
-        safeSetItem(AVATAR_KEY, JSON.stringify(avatarProfiles));
-    }, [avatarProfiles]);
+        const uid = session?.user?.id;
+        if (!uid) {
+            writeSnapshotToLocalStorage(snapshot);
+            return;
+        }
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => {
+            saveSnapshotToSupabase(uid, snapshot);
+        }, 450);
+        return () => clearTimeout(saveTimerRef.current);
+    }, [snapshot, hydrated, session?.user?.id]);
 
     useEffect(() => {
         if (!needUserHint) return;
@@ -519,6 +509,22 @@ export default function BubbleTodoApp() {
         setTinyTasks((prev) => prev.filter((t) => t.id !== taskId));
     };
 
+    if (isSupabaseConfigured() && (!authReady || !hydrated)) {
+        return (
+            <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-b from-sky-50 to-slate-100 text-slate-600">
+                <p className="text-sm font-medium">Loading…</p>
+            </div>
+        );
+    }
+
+    const email = session?.user?.email;
+    const isEmailSession = Boolean(email && !session?.user?.is_anonymous);
+    const storageHint = !isSupabaseConfigured()
+        ? "Your data is stored in this browser."
+        : isEmailSession
+          ? "Synced to your account (same data on phone and laptop)."
+          : "Sign in with email below to sync across devices.";
+
     return (
 
 <div className="min-h-dvh w-full bg-gradient-to-b from-sky-50 to-slate-100 text-slate-800 font-sans">
@@ -526,6 +532,7 @@ export default function BubbleTodoApp() {
                 {/* Header / Controls */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
                     <div className="w-full sm:max-w-lg flex flex-col gap-3">
+                        {isSupabaseConfigured() && <AuthPanel session={session} />}
                         <UserSelector
                             users={users}
                             activeUser={activeUser}
@@ -682,9 +689,7 @@ export default function BubbleTodoApp() {
                     onClaimPrize={claimUnlockedPrize}
                 />
 
-                <p className="mt-8 text-center text-xs text-slate-400 px-2">
-                    Try refreshing the page. Your data is stored in this browser.
-                </p>
+                <p className="mt-8 text-center text-xs text-slate-400 px-2">{storageHint}</p>
             </div>
         </div>
     );
