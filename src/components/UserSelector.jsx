@@ -2,7 +2,15 @@ import React, { useState, useRef } from "react";
 import { User, Plus, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function UserSelector({ users, activeUser, onSelectUser, onAdd, onDoubleTap }) {
+export default function UserSelector({
+  users,
+  activeUser,
+  onSelectUser,
+  onAdd,
+  onDoubleTap,
+  requireEmailToAddUser = false,
+  onAddUserBlocked
+}) {
     const [isAdding, setIsAdding] = useState(false);
     const [newName, setNewName] = useState("");
     const lastClickRef = useRef({});
@@ -68,7 +76,13 @@ export default function UserSelector({ users, activeUser, onSelectUser, onAdd, o
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.8 }}
-                        onClick={() => setIsAdding(true)}
+                        onClick={() => {
+                            if (requireEmailToAddUser && onAddUserBlocked) {
+                                onAddUserBlocked();
+                                return;
+                            }
+                            setIsAdding(true);
+                        }}
                         className="flex items-center justify-center w-8 h-8 rounded-full bg-white/60 text-slate-500 hover:bg-white hover:text-slate-700 hover:shadow-sm transition-all border border-transparent hover:border-slate-200"
                         title="Add User"
                         aria-label="Add user"

@@ -1,5 +1,5 @@
-import React from "react";
-import { Star } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Star, Trash2 } from "lucide-react";
 
 const AVATAR_EMOJI = {
     Egg: "🥚",
@@ -8,7 +8,19 @@ const AVATAR_EMOJI = {
     Dragon: "🐉"
 };
 
-export default function AvatarCard({ activeUser, profile, getAvatarName, getProgress }) {
+export default function AvatarCard({
+    activeUser,
+    profile,
+    getAvatarName,
+    getProgress,
+    onRemoveUser
+}) {
+    const [confirming, setConfirming] = useState(false);
+
+    useEffect(() => {
+        setConfirming(false);
+    }, [activeUser]);
+
     if (!activeUser) {
         return (
             <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
@@ -23,6 +35,11 @@ export default function AvatarCard({ activeUser, profile, getAvatarName, getProg
     const progress = getProgress(xp);
     const avatarName = getAvatarName(progress.level);
     const avatarEmoji = AVATAR_EMOJI[avatarName] || "🥚";
+
+    const handleRemove = () => {
+        onRemoveUser?.(activeUser);
+        setConfirming(false);
+    };
 
     return (
         <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
@@ -58,6 +75,43 @@ export default function AvatarCard({ activeUser, profile, getAvatarName, getProg
             <div className="mt-2 text-xs text-slate-500">
                 {progress.currentLevelXp}/{progress.neededForNextLevel} XP to next level
             </div>
+
+            {onRemoveUser && (
+                <div className="mt-4 pt-3 border-t border-slate-100">
+                    {!confirming ? (
+                        <button
+                            type="button"
+                            onClick={() => setConfirming(true)}
+                            className="inline-flex items-center gap-2 text-sm font-medium text-red-700 hover:text-red-800 hover:underline"
+                        >
+                            <Trash2 size={14} aria-hidden />
+                            Remove user
+                        </button>
+                    ) : (
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-xs text-slate-600">
+                                Remove <span className="font-semibold text-slate-800">{activeUser}</span> from this list?
+                            </p>
+                            <div className="flex gap-2 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirming(false)}
+                                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleRemove}
+                                    className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

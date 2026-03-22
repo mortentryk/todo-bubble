@@ -9,6 +9,7 @@ import GoalsPage from "./components/GoalsPage";
 import AvatarCard from "./components/AvatarCard";
 import BattlePage from "./components/BattlePage";
 import AuthPanel from "./components/AuthPanel";
+import SignInModal from "./components/SignInModal";
 import { randomPastel, uid, getLevelProgress, getAvatarByLevel } from "./utils/helpers";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import {
@@ -54,6 +55,7 @@ export default function BubbleTodoApp() {
     const [weeklyRegistry, setWeeklyRegistry] = useState(() => boot.weeklyRegistry);
     const [prizes, setPrizes] = useState(() => boot.prizes);
     const [showModal, setShowModal] = useState(false);
+    const [showSignInModal, setShowSignInModal] = useState(false);
     const [showStats, setShowStats] = useState(false);
     const [showRewards, setShowRewards] = useState(false);
     const [showAvatar, setShowAvatar] = useState(false);
@@ -179,6 +181,13 @@ export default function BubbleTodoApp() {
         }, 450);
         return () => clearTimeout(saveTimerRef.current);
     }, [snapshot, hydrated, session?.user?.id]);
+
+    useEffect(() => {
+        const signedInWithEmail = Boolean(
+            session?.user?.email && !session?.user?.is_anonymous
+        );
+        if (signedInWithEmail) setShowSignInModal(false);
+    }, [session]);
 
     useEffect(() => {
         if (!needUserHint) return;
@@ -399,6 +408,20 @@ export default function BubbleTodoApp() {
         }
     };
 
+    const handleRemoveUser = (name) => {
+        setAvatarProfiles((prev) => {
+            const next = { ...prev };
+            delete next[name];
+            return next;
+        });
+        setHistory((prev) => prev.filter((h) => h.poppedBy !== name));
+        setUsers((prev) => {
+            const next = prev.filter((u) => u !== name);
+            setActiveUser((cur) => (cur === name ? (next[0] ?? "") : cur));
+            return next;
+        });
+    };
+
     const activeAvatarProfile = activeUser ? avatarProfiles[activeUser] : null;
 
     const applyBattleResultToAvatars = ({ player1, player2, winner, loser, isDraw }) => {
@@ -532,13 +555,20 @@ export default function BubbleTodoApp() {
                 {/* Header / Controls */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
                     <div className="w-full sm:max-w-lg flex flex-col gap-3">
-                        {isSupabaseConfigured() && <AuthPanel session={session} />}
+                        {isSupabaseConfigured() && (
+                            <AuthPanel session={session} idSuffix="-header" />
+                        )}
                         <UserSelector
                             users={users}
                             activeUser={activeUser}
                             onSelectUser={selectUser}
                             onAdd={handleAddUser}
                             onDoubleTap={handleUserDoubleTap}
+                            requireEmailToAddUser={
+                                isSupabaseConfigured() &&
+                                !(session?.user?.email && !session?.user?.is_anonymous)
+                            }
+                            onAddUserBlocked={() => setShowSignInModal(true)}
                         />
                         {showAvatar && (
                             <AvatarCard
@@ -546,6 +576,7 @@ export default function BubbleTodoApp() {
                                 profile={activeAvatarProfile}
                                 getAvatarName={getAvatarByLevel}
                                 getProgress={getLevelProgress}
+                                onRemoveUser={handleRemoveUser}
                             />
                         )}
                     </div>
@@ -690,6 +721,12 @@ export default function BubbleTodoApp() {
                 />
 
                 <p className="mt-8 text-center text-xs text-slate-400 px-2">{storageHint}</p>
+
+                <SignInModal
+                    open={showSignInModal}
+                    onClose={() => setShowSignInModal(false)}
+                    session={session}
+                />
             </div>
         </div>
     );

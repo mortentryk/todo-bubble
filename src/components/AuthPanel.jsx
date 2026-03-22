@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { LogIn, LogOut, Mail } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
-export default function AuthPanel({ session }) {
+export default function AuthPanel({ session, idSuffix = "" }) {
+  const emailFieldId = `auth-email${idSuffix}`;
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
@@ -80,11 +81,11 @@ export default function AuthPanel({ session }) {
             </p>
           )}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-            <label className="sr-only" htmlFor="auth-email">
+            <label className="sr-only" htmlFor={emailFieldId}>
               Email
             </label>
             <input
-              id="auth-email"
+              id={emailFieldId}
               type="email"
               autoComplete="email"
               placeholder="you@example.com"
