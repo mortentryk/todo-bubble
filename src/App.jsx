@@ -8,7 +8,6 @@ import UserSelector from "./components/UserSelector";
 import GoalsPage from "./components/GoalsPage";
 import AvatarCard from "./components/AvatarCard";
 import BattlePage from "./components/BattlePage";
-import AuthPanel from "./components/AuthPanel";
 import SignInModal from "./components/SignInModal";
 import { randomPastel, uid, getLevelProgress, getAvatarByLevel } from "./utils/helpers";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
@@ -555,11 +554,6 @@ export default function BubbleTodoApp() {
                 {/* Header / Controls */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
                     <div className="w-full sm:max-w-lg flex flex-col gap-3">
-                        {isSupabaseConfigured() &&
-                            (currentView !== "bubbles" ||
-                                (session?.user?.email && !session?.user?.is_anonymous)) && (
-                            <AuthPanel session={session} idSuffix="-header" />
-                        )}
                         <UserSelector
                             users={users}
                             activeUser={activeUser}
