@@ -27,7 +27,7 @@ export default function SignInModal({ open, onClose, session }) {
       <div className="relative w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-200/80 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-2 mb-3">
           <h2 id="sign-in-modal-title" className="text-lg font-semibold text-slate-800 pr-8">
-            Sign in to add a user
+            Sign in or continue as guest
           </h2>
           <button
             type="button"
@@ -39,9 +39,10 @@ export default function SignInModal({ open, onClose, session }) {
           </button>
         </div>
         <p className="text-sm text-slate-600 mb-3">
-          Add family names after you sign in with email so your list stays synced across devices.
+          Use your email for sync everywhere, or continue as a guest to add names on this device only (until you
+          sign out or clear site data).
         </p>
-        <AuthPanel session={session} idSuffix="-modal" />
+        <AuthPanel session={session} idSuffix="-modal" onGuestSignedIn={onClose} />
       </div>
     </div>
   );

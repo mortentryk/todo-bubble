@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { LogIn, LogOut, Mail } from "lucide-react";
+import { LogIn, LogOut, Mail, UserCircle } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
-export default function AuthPanel({ session, idSuffix = "" }) {
+export default function AuthPanel({ session, idSuffix = "", onGuestSignedIn }) {
   const emailFieldId = `auth-email${idSuffix}`;
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
@@ -34,6 +34,20 @@ export default function AuthPanel({ session, idSuffix = "" }) {
       return;
     }
     setMessage("Check your email for the sign-in link.");
+  }
+
+  async function handleContinueAsGuest() {
+    if (!supabase) return;
+    setError(null);
+    setMessage(null);
+    setBusy(true);
+    const { error: err } = await supabase.auth.signInAnonymously();
+    setBusy(false);
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    onGuestSignedIn?.();
   }
 
   async function handleSignOut() {
@@ -69,7 +83,7 @@ export default function AuthPanel({ session, idSuffix = "" }) {
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSendLink} className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           {isAnon && (
             <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
               Sign in with email to sync this app on your phone and laptop.
@@ -77,34 +91,48 @@ export default function AuthPanel({ session, idSuffix = "" }) {
           )}
           {!user && (
             <p className="text-xs text-slate-500">
-              Sign in with email (magic link) for cloud sync across devices.
+              Sign in with email (magic link) for cloud sync across devices, or continue as a guest on this
+              device.
             </p>
           )}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-            <label className="sr-only" htmlFor={emailFieldId}>
-              Email
-            </label>
-            <input
-              id={emailFieldId}
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex-1 min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
-            />
+          <form onSubmit={handleSendLink} className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+              <label className="sr-only" htmlFor={emailFieldId}>
+                Email
+              </label>
+              <input
+                id={emailFieldId}
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="flex-1 min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
+              />
+              <button
+                type="submit"
+                disabled={busy || !email.trim()}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-white font-medium hover:bg-slate-800 disabled:opacity-50"
+              >
+                <LogIn size={16} aria-hidden />
+                Send link
+              </button>
+            </div>
+          </form>
+          {!user && (
             <button
-              type="submit"
-              disabled={busy || !email.trim()}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-white font-medium hover:bg-slate-800 disabled:opacity-50"
+              type="button"
+              onClick={handleContinueAsGuest}
+              disabled={busy}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-700 font-medium hover:bg-slate-50 disabled:opacity-50"
             >
-              <LogIn size={16} aria-hidden />
-              Send link
+              <UserCircle size={16} aria-hidden />
+              Continue as guest
             </button>
-          </div>
+          )}
           {message && <p className="text-xs text-emerald-700">{message}</p>}
           {error && <p className="text-xs text-red-600">{error}</p>}
-        </form>
+        </div>
       )}
     </div>
   );

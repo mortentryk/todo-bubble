@@ -183,10 +183,7 @@ export default function BubbleTodoApp() {
     }, [snapshot, hydrated, session?.user?.id]);
 
     useEffect(() => {
-        const signedInWithEmail = Boolean(
-            session?.user?.email && !session?.user?.is_anonymous
-        );
-        if (signedInWithEmail) setShowSignInModal(false);
+        if (session?.user) setShowSignInModal(false);
     }, [session]);
 
     useEffect(() => {
@@ -542,11 +539,14 @@ export default function BubbleTodoApp() {
 
     const email = session?.user?.email;
     const isEmailSession = Boolean(email && !session?.user?.is_anonymous);
+    const isGuestSession = Boolean(session?.user?.is_anonymous);
     const storageHint = !isSupabaseConfigured()
         ? "Your data is stored in this browser."
         : isEmailSession
           ? "Synced to your account (same data on phone and laptop)."
-          : "Sign in with email below to sync across devices.";
+          : isGuestSession
+            ? "Guest: saved for this browser session. Add your email below to sync across devices."
+            : "Sign in with email below to sync across devices.";
 
     return (
 
@@ -555,7 +555,9 @@ export default function BubbleTodoApp() {
                 {/* Header / Controls */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
                     <div className="w-full sm:max-w-lg flex flex-col gap-3">
-                        {isSupabaseConfigured() && (
+                        {isSupabaseConfigured() &&
+                            (currentView !== "bubbles" ||
+                                (session?.user?.email && !session?.user?.is_anonymous)) && (
                             <AuthPanel session={session} idSuffix="-header" />
                         )}
                         <UserSelector
@@ -564,10 +566,7 @@ export default function BubbleTodoApp() {
                             onSelectUser={selectUser}
                             onAdd={handleAddUser}
                             onDoubleTap={handleUserDoubleTap}
-                            requireEmailToAddUser={
-                                isSupabaseConfigured() &&
-                                !(session?.user?.email && !session?.user?.is_anonymous)
-                            }
+                            requireEmailToAddUser={isSupabaseConfigured() && !session?.user}
                             onAddUserBlocked={() => setShowSignInModal(true)}
                         />
                         {showAvatar && (
