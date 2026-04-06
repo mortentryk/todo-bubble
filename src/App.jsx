@@ -496,6 +496,43 @@ export default function BubbleTodoApp() {
         return id;
     };
 
+    const reorderGoals = (orderedIds) => {
+        setGoals((prev) => {
+            const byId = Object.fromEntries(prev.map((g) => [g.id, g]));
+            return orderedIds.map((id) => byId[id]).filter(Boolean);
+        });
+        if (typeof navigator !== "undefined" && navigator.vibrate) {
+            navigator.vibrate(12);
+        }
+    };
+
+    const moveGoal = (goalId, direction) => {
+        setGoals((prev) => {
+            const idx = prev.findIndex((g) => g.id === goalId);
+            if (idx === -1) return prev;
+            const next = [...prev];
+            if (direction === "up" && idx > 0) {
+                [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+            } else if (direction === "down" && idx < next.length - 1) {
+                [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+            } else if (direction === "top" && idx > 0) {
+                const [item] = next.splice(idx, 1);
+                next.unshift(item);
+            } else {
+                return prev;
+            }
+            return next;
+        });
+        if (typeof navigator !== "undefined" && navigator.vibrate) {
+            navigator.vibrate(12);
+        }
+    };
+
+    const removeGoal = (goalId) => {
+        setGoals((prev) => prev.filter((g) => g.id !== goalId));
+        setTinyTasks((prev) => prev.filter((t) => t.goalId !== goalId));
+    };
+
     const addTinyTask = (goalId, text) => {
         const trimmed = text.trim();
         if (!trimmed) return;
@@ -663,6 +700,9 @@ export default function BubbleTodoApp() {
                         goals={goals}
                         tinyTasks={tinyTasks}
                         onAddGoal={addGoal}
+                        onReorderGoals={reorderGoals}
+                        onMoveGoal={moveGoal}
+                        onRemoveGoal={removeGoal}
                         onAddTinyTask={addTinyTask}
                         onToggleTinyTaskDone={toggleTinyTaskDone}
                         onSendTinyTaskToBubble={sendTinyTaskToBubble}
