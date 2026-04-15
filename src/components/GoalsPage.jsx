@@ -22,9 +22,12 @@ function GoalCard({
     tinyInput,
     onTinyInputChange,
     onAddTinyStep,
-    subTaskInputs,
-    onSubTaskInputChange,
     onAddTinySubTask,
+    subTaskInputs,
+    openTinyerEditors,
+    onOpenTinyerEditor,
+    onCloseTinyerEditor,
+    onSubTaskInputChange,
     onToggleTinyTaskDone,
     onSendTinyTaskToBubble,
     onRemoveTinyTask,
@@ -50,8 +53,9 @@ function GoalCard({
 
     const renderTaskTree = (task, depth = 0) => {
         const children = tasksByParent[task.id] || [];
-        const subTaskInput = subTaskInputs[task.id] || "";
         const wasRecentlySent = !!recentlySentTaskIds?.[task.id];
+        const isEditorOpen = !!openTinyerEditors?.[task.id];
+        const subTaskInput = subTaskInputs?.[task.id] || "";
         return (
             <div key={task.id} className={depth > 0 ? "mt-2" : ""}>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 flex flex-wrap items-center gap-2">
@@ -87,6 +91,15 @@ function GoalCard({
                     </button>
                     <button
                         type="button"
+                        onClick={() => onOpenTinyerEditor(task.id)}
+                        className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 transition-colors"
+                        title="Add tinyer step"
+                    >
+                        <Plus size={12} />
+                        tinyer
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => onRemoveTinyTask(task.id)}
                         className="inline-flex items-center justify-center rounded-full border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 transition-colors"
                         title="Delete tiny step"
@@ -95,28 +108,40 @@ function GoalCard({
                     </button>
                 </div>
                 <div className="mt-2 ml-3 sm:ml-5 border-l border-slate-200 pl-2 sm:pl-3">
-                    <div className="flex flex-col sm:flex-row gap-2">
-                        <input
-                            type="text"
-                            value={subTaskInput}
-                            onChange={(e) => onSubTaskInputChange(task.id, e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") onAddTinySubTask(goal.id, task.id);
-                            }}
-                            placeholder="Add tinyer step"
-                            className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => onAddTinySubTask(goal.id, task.id)}
-                            disabled={!subTaskInput.trim()}
-                            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                            Add tinyer step
-                        </button>
-                    </div>
+                    {isEditorOpen && (
+                        <div className="mb-2 flex flex-col sm:flex-row gap-2">
+                            <input
+                                type="text"
+                                value={subTaskInput}
+                                onChange={(e) => onSubTaskInputChange(task.id, e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") onAddTinySubTask(goal.id, task.id);
+                                    if (e.key === "Escape") onCloseTinyerEditor(task.id);
+                                }}
+                                placeholder="tinyer step..."
+                                className="flex-1 rounded-xl border border-violet-200 bg-white px-3 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            />
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => onAddTinySubTask(goal.id, task.id)}
+                                    disabled={!subTaskInput.trim()}
+                                    className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs sm:text-sm font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Add
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => onCloseTinyerEditor(task.id)}
+                                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     {children.length > 0 && (
-                        <div className="mt-2">
+                        <div>
                             {children.map((childTask) => renderTaskTree(childTask, depth + 1))}
                         </div>
                     )}
@@ -303,6 +328,7 @@ export default function GoalsPage({
     const [expandedGoals, setExpandedGoals] = useState({});
     const [tinyInputs, setTinyInputs] = useState({});
     const [subTaskInputs, setSubTaskInputs] = useState({});
+    const [openTinyerEditors, setOpenTinyerEditors] = useState({});
     const [recentlySentTaskIds, setRecentlySentTaskIds] = useState({});
 
     const tasksByGoal = useMemo(() => {
@@ -340,11 +366,24 @@ export default function GoalsPage({
         setSubTaskInputs((prev) => ({ ...prev, [taskId]: value }));
     };
 
+    const openTinyerEditor = (taskId) => {
+        setOpenTinyerEditors((prev) => ({ ...prev, [taskId]: true }));
+    };
+
+    const closeTinyerEditor = (taskId) => {
+        setOpenTinyerEditors((prev) => {
+            const next = { ...prev };
+            delete next[taskId];
+            return next;
+        });
+    };
+
     const addTinySubTask = (goalId, parentTaskId) => {
         const nextTask = subTaskInputs[parentTaskId] || "";
         onAddTinySubTask(goalId, parentTaskId, nextTask);
         setExpandedGoals((prev) => ({ ...prev, [goalId]: true }));
         setSubTaskInputs((prev) => ({ ...prev, [parentTaskId]: "" }));
+        closeTinyerEditor(parentTaskId);
     };
 
     const sendTaskToBubbleWithFeedback = (taskId) => {
@@ -373,7 +412,6 @@ export default function GoalsPage({
             delete next[goalId];
             return next;
         });
-        setSubTaskInputs({});
     };
 
     const sharedCardProps = (goal, goalIndex) => ({
@@ -384,9 +422,12 @@ export default function GoalsPage({
         tinyInput: tinyInputs[goal.id] || "",
         onTinyInputChange: setTinyInputForGoal,
         onAddTinyStep: addTinyTask,
-        subTaskInputs,
-        onSubTaskInputChange: setSubTaskInputForTask,
         onAddTinySubTask: addTinySubTask,
+        subTaskInputs,
+        openTinyerEditors,
+        onOpenTinyerEditor: openTinyerEditor,
+        onCloseTinyerEditor: closeTinyerEditor,
+        onSubTaskInputChange: setSubTaskInputForTask,
         onToggleTinyTaskDone,
         onSendTinyTaskToBubble: sendTaskToBubbleWithFeedback,
         onRemoveTinyTask,

@@ -420,7 +420,7 @@ export default function BubbleTodoApp() {
 
     const activeAvatarProfile = activeUser ? avatarProfiles[activeUser] : null;
 
-    const applyBattleResultToAvatars = ({ player1, player2, winner, loser, isDraw }) => {
+    const applyBattleResultToAvatars = ({ player1, player2, winner, loser, isDraw, starsWager = 1 }) => {
         if (!player1 || !player2) return;
         if (isDraw) return;
 
@@ -443,16 +443,17 @@ export default function BubbleTodoApp() {
 
             const loserStars = Math.max(0, pLoser.stars ?? 0);
             const winnerStars = Math.max(0, pWinner.stars ?? 0);
+            const transfer = Math.min(Math.max(1, Number(starsWager) || 1), loserStars);
 
             return {
                 ...prev,
                 [winner]: {
                     ...pWinner,
-                    stars: winnerStars + loserStars
+                    stars: winnerStars + transfer
                 },
                 [loser]: {
                     ...pLoser,
-                    stars: 0
+                    stars: loserStars - transfer
                 }
             };
         });

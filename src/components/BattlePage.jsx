@@ -51,6 +51,7 @@ export default function BattlePage({
     const [preparedMatch, setPreparedMatch] = useState(null);
     const [showWinnerVideoModal, setShowWinnerVideoModal] = useState(false);
     const [videoFallbackIndex, setVideoFallbackIndex] = useState(0);
+    const [starWager, setStarWager] = useState(1);
 
     const fightTimeoutRef = useRef([]);
 
@@ -59,6 +60,9 @@ export default function BattlePage({
 
     const xp1 = profile1?.xp ?? 0;
     const xp2 = profile2?.xp ?? 0;
+    const stars1 = profile1?.stars ?? 0;
+    const stars2 = profile2?.stars ?? 0;
+    const maxWager = Math.max(1, Math.min(stars1, stars2));
 
     const canResolve =
         !!player1 &&
@@ -83,7 +87,12 @@ export default function BattlePage({
         setPreparedMatch(null);
         setShowWinnerVideoModal(false);
         matchKeyRef.current = null;
+        setStarWager(1);
     }, [activeUser, users]);
+
+    useEffect(() => {
+        setStarWager((prev) => Math.min(Math.max(1, prev), maxWager));
+    }, [maxWager]);
 
     useEffect(() => {
         return () => {
@@ -245,7 +254,8 @@ export default function BattlePage({
                 player2,
                 winner: matchWinnerName,
                 loser: matchLoserName,
-                isDraw: false
+                isDraw: false,
+                starsWager: starWager
             });
         } else {
             onApplyBattleResult({
@@ -253,7 +263,8 @@ export default function BattlePage({
                 player2,
                 winner: null,
                 loser: null,
-                isDraw: true
+                isDraw: true,
+                starsWager: starWager
             });
         }
 
@@ -336,8 +347,41 @@ export default function BattlePage({
                     </p>
                 </div>
                 <div className="text-xs text-slate-400 lg:text-right">
-                    Win: <span className="font-semibold text-emerald-700">+10</span> XP, Loss:{" "}
-                    <span className="font-semibold text-rose-700">-5</span> XP
+                    Winner takes <span className="font-semibold text-amber-700">{starWager}</span> battled stars
+                </div>
+            </div>
+
+            <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50/80 p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-sm text-amber-900">
+                        Stars to battle (max {maxWager}, based on both players' current stars)
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="range"
+                            min={1}
+                            max={maxWager}
+                            value={starWager}
+                            onChange={(e) => setStarWager(Number(e.target.value))}
+                            className="w-40 accent-amber-600"
+                            disabled={phase !== "picking"}
+                            aria-label="Choose stars to battle"
+                        />
+                        <input
+                            type="number"
+                            min={1}
+                            max={maxWager}
+                            value={starWager}
+                            onChange={(e) => {
+                                const next = Number(e.target.value);
+                                if (Number.isNaN(next)) return;
+                                setStarWager(Math.min(Math.max(1, next), maxWager));
+                            }}
+                            className="w-20 rounded-lg border border-amber-300 bg-white px-2 py-1 text-sm text-slate-700"
+                            disabled={phase !== "picking"}
+                            aria-label="Stars to battle"
+                        />
+                    </div>
                 </div>
             </div>
 
