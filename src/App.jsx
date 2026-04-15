@@ -542,6 +542,23 @@ export default function BubbleTodoApp() {
                 id: uid(),
                 goalId,
                 text: trimmed,
+                parentTaskId: null,
+                done: false,
+                createdAt: Date.now()
+            }
+        ]);
+    };
+
+    const addTinySubTask = (goalId, parentTaskId, text) => {
+        const trimmed = text.trim();
+        if (!trimmed) return;
+        setTinyTasks((prev) => [
+            ...prev,
+            {
+                id: uid(),
+                goalId,
+                parentTaskId,
+                text: trimmed,
                 done: false,
                 createdAt: Date.now()
             }
@@ -557,12 +574,26 @@ export default function BubbleTodoApp() {
 
     const sendTinyTaskToBubble = (taskId) => {
         const task = tinyTasks.find((t) => t.id === taskId);
-        if (!task) return;
+        if (!task) return false;
         addMany([task.text], { score: 3, isWeekly: false });
+        return true;
     };
 
     const removeTinyTask = (taskId) => {
-        setTinyTasks((prev) => prev.filter((t) => t.id !== taskId));
+        setTinyTasks((prev) => {
+            const stack = [taskId];
+            const removeIds = new Set([taskId]);
+            while (stack.length > 0) {
+                const current = stack.pop();
+                for (const task of prev) {
+                    if (task.parentTaskId === current && !removeIds.has(task.id)) {
+                        removeIds.add(task.id);
+                        stack.push(task.id);
+                    }
+                }
+            }
+            return prev.filter((t) => !removeIds.has(t.id));
+        });
     };
 
     if (isSupabaseConfigured() && (!authReady || !hydrated)) {
@@ -704,6 +735,7 @@ export default function BubbleTodoApp() {
                         onMoveGoal={moveGoal}
                         onRemoveGoal={removeGoal}
                         onAddTinyTask={addTinyTask}
+                        onAddTinySubTask={addTinySubTask}
                         onToggleTinyTaskDone={toggleTinyTaskDone}
                         onSendTinyTaskToBubble={sendTinyTaskToBubble}
                         onRemoveTinyTask={removeTinyTask}
