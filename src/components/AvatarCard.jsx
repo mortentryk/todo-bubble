@@ -11,6 +11,7 @@ const AVATAR_EMOJI = {
 export default function AvatarCard({
     activeUser,
     profile,
+    xp = 0,
     getAvatarName,
     getProgress,
     onRemoveUser
@@ -30,7 +31,6 @@ export default function AvatarCard({
         );
     }
 
-    const xp = profile?.xp || 0;
     const stars = profile?.stars ?? 0;
     const progress = getProgress(xp);
     const avatarName = getAvatarName(progress.level);

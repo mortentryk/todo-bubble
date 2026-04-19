@@ -18,6 +18,12 @@ import {
     saveSnapshotToSupabase,
     writeSnapshotToLocalStorage
 } from "./lib/bubblePersistence";
+import {
+    awardXp,
+    loadLocalXp,
+    loadXpFromSupabase,
+    writeLocalXp
+} from "./lib/xp";
 
 /** Battle currency used to unlock rewards. New / legacy profiles without `stars` get this once on load. */
 const STARTING_STARS = 0;
@@ -28,8 +34,11 @@ function migrateAvatarProfiles(raw) {
     const out = {};
     for (const [name, v] of Object.entries(raw)) {
         if (!v || typeof v !== "object") continue;
+        // xp now lives in the shared `user_xp` table; strip any legacy mirrored
+        // values so the UI never reads stale JSONB xp.
+        const { xp: _legacyXp, level: _legacyLevel, ...rest } = v;
         out[name] = {
-            ...v,
+            ...rest,
             stars: typeof v.stars === "number" ? v.stars : STARTING_STARS
         };
     }
@@ -66,6 +75,7 @@ export default function BubbleTodoApp() {
     const [avatarProfiles, setAvatarProfiles] = useState(() =>
         migrateAvatarProfiles(boot.avatarProfiles)
     );
+    const [xp, setXp] = useState(() => (isSupabaseConfigured() ? 0 : loadLocalXp()));
 
     const [hydrated, setHydrated] = useState(() => !isSupabaseConfigured());
     const [authReady, setAuthReady] = useState(() => !isSupabaseConfigured());
@@ -141,11 +151,15 @@ export default function BubbleTodoApp() {
                 setGoals(s.goals);
                 setTinyTasks(s.tinyTasks);
                 setAvatarProfiles(migrateAvatarProfiles(s.avatarProfiles));
+                setXp(loadLocalXp());
                 setHydrated(true);
                 return;
             }
             const seed = snapshotRef.current;
-            const { snapshot: snap } = await loadSnapshotForUser(user.id, seed);
+            const [{ snapshot: snap }, remoteXp] = await Promise.all([
+                loadSnapshotForUser(user.id, seed),
+                loadXpFromSupabase(user.id)
+            ]);
             if (cancelled) return;
             setItems(snap.items);
             setHistory(snap.history);
@@ -156,6 +170,7 @@ export default function BubbleTodoApp() {
             setGoals(snap.goals);
             setTinyTasks(snap.tinyTasks);
             setAvatarProfiles(migrateAvatarProfiles(snap.avatarProfiles));
+            setXp(typeof remoteXp === "number" ? remoteXp : 0);
             setHydrated(true);
         })();
         return () => {
@@ -167,11 +182,13 @@ export default function BubbleTodoApp() {
         if (!hydrated) return;
         if (!isSupabaseConfigured() || !supabase) {
             writeSnapshotToLocalStorage(snapshot);
+            writeLocalXp(xp);
             return;
         }
         const uid = session?.user?.id;
         if (!uid) {
             writeSnapshotToLocalStorage(snapshot);
+            writeLocalXp(xp);
             return;
         }
         clearTimeout(saveTimerRef.current);
@@ -179,7 +196,7 @@ export default function BubbleTodoApp() {
             saveSnapshotToSupabase(uid, snapshot);
         }, 450);
         return () => clearTimeout(saveTimerRef.current);
-    }, [snapshot, hydrated, session?.user?.id]);
+    }, [snapshot, xp, hydrated, session?.user?.id]);
 
     useEffect(() => {
         if (session?.user) setShowSignInModal(false);
@@ -202,8 +219,6 @@ export default function BubbleTodoApp() {
             return {
                 ...prev,
                 [name]: {
-                    xp: 0,
-                    level: 1,
                     mood: "happy",
                     lastFedAt: Date.now(),
                     stars: STARTING_STARS
@@ -332,25 +347,37 @@ export default function BubbleTodoApp() {
         const xpGain = item.score || 5;
         // Open XP UI when awarding experience for a completed bubble.
         setShowAvatar(true);
+
+        // Stars still live in JSONB per avatar profile.
         setAvatarProfiles((prev) => {
             const existing = prev[activeUser] || {
-                xp: 0,
-                level: 1,
                 mood: "happy",
-                lastFedAt: Date.now()
+                lastFedAt: Date.now(),
+                stars: STARTING_STARS
             };
-            const nextXp = existing.xp + xpGain;
-            const nextStars = (existing.stars ?? 0) + xpGain;
             return {
                 ...prev,
                 [activeUser]: {
                     ...existing,
-                    xp: nextXp,
-                    level: getLevelProgress(nextXp).level,
-                    stars: nextStars
+                    stars: (existing.stars ?? 0) + xpGain
                 }
             };
         });
+
+        // XP is tracked in the shared `user_xp` table via the `award_xp` RPC.
+        const userId = session?.user?.id;
+        if (isSupabaseConfigured() && userId) {
+            (async () => {
+                const newXp = await awardXp({
+                    amount: xpGain,
+                    source: "todo",
+                    meta: { taskId: item.id, text: item.text }
+                });
+                if (typeof newXp === "number") setXp(newXp);
+            })();
+        } else {
+            setXp((prev) => prev + xpGain);
+        }
 
         // Update weekly registry if applicable
         if (item.isWeekly && item.weeklyId) {
@@ -429,8 +456,6 @@ export default function BubbleTodoApp() {
                 if (!name) return null;
                 if (prev[name]) return prev[name];
                 return {
-                    xp: 0,
-                    level: 1,
                     mood: "happy",
                     lastFedAt: Date.now(),
                     stars: STARTING_STARS
@@ -636,6 +661,7 @@ export default function BubbleTodoApp() {
                             <AvatarCard
                                 activeUser={activeUser}
                                 profile={activeAvatarProfile}
+                                xp={xp}
                                 getAvatarName={getAvatarByLevel}
                                 getProgress={getLevelProgress}
                                 onRemoveUser={handleRemoveUser}
@@ -723,6 +749,7 @@ export default function BubbleTodoApp() {
                         users={users}
                         activeUser={activeUser}
                         avatarProfiles={avatarProfiles}
+                        xp={xp}
                         getProgress={getLevelProgress}
                         getAvatarName={getAvatarByLevel}
                         onApplyBattleResult={applyBattleResultToAvatars}

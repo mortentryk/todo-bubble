@@ -30,6 +30,7 @@ export default function BattlePage({
     users = [],
     activeUser = "",
     avatarProfiles = {},
+    xp = 0,
     getProgress,
     getAvatarName,
     onApplyBattleResult
@@ -58,8 +59,10 @@ export default function BattlePage({
     const profile1 = avatarProfiles[player1] || null;
     const profile2 = avatarProfiles[player2] || null;
 
-    const xp1 = profile1?.xp ?? 0;
-    const xp2 = profile2?.xp ?? 0;
+    // XP is shared per authenticated account (from the `user_xp` table), so both
+    // local avatar profiles always share the same XP value.
+    const xp1 = xp;
+    const xp2 = xp;
     const stars1 = profile1?.stars ?? 0;
     const stars2 = profile2?.stars ?? 0;
     const maxWager = Math.max(1, Math.min(stars1, stars2));
@@ -318,6 +321,7 @@ export default function BattlePage({
             <AvatarCard
                 activeUser={player1}
                 profile={avatarProfiles[player1]}
+                xp={xp}
                 getAvatarName={getAvatarName}
                 getProgress={getProgress}
             />
@@ -329,6 +333,7 @@ export default function BattlePage({
             <AvatarCard
                 activeUser={player2}
                 profile={avatarProfiles[player2]}
+                xp={xp}
                 getAvatarName={getAvatarName}
                 getProgress={getProgress}
             />
