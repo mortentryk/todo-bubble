@@ -642,9 +642,12 @@ export default function BubbleTodoApp() {
             : "Sign in with email below to sync across devices.";
 
     return (
-
-<div className="min-h-dvh w-full bg-gradient-to-b from-sky-50 to-slate-100 text-slate-800 font-sans">
-            <div className="mx-auto max-w-5xl p-3 pb-24 sm:p-6 sm:pb-28">
+        <div className="min-h-dvh w-full bg-gradient-to-b from-sky-50 to-slate-100 text-slate-800 font-sans">
+            <h1 className="sr-only">
+                Bubble Todo — ADHD-friendly task app with visual bubbles, goals, battles, and
+                rewards
+            </h1>
+            <main className="mx-auto max-w-5xl p-3 pb-24 sm:p-6 sm:pb-28">
                 {/* Header / Controls */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
                     <div className="w-full sm:max-w-lg flex flex-col gap-3">
@@ -820,7 +823,7 @@ export default function BubbleTodoApp() {
                     onClose={() => setShowSignInModal(false)}
                     session={session}
                 />
-            </div>
+            </main>
         </div>
     );
 }
