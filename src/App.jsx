@@ -24,6 +24,7 @@ import {
     loadXpFromSupabase,
     writeLocalXp
 } from "./lib/xp";
+import { ensureNotificationPermission, notifyFocusTimerDone } from "./lib/focusNotifications";
 
 /** Battle currency used to unlock rewards. New / legacy profiles without `stars` get this once on load. */
 const STARTING_STARS = 0;
@@ -82,6 +83,7 @@ export default function BubbleTodoApp() {
     const [session, setSession] = useState(null);
     const saveTimerRef = useRef(null);
     const snapshotRef = useRef(null);
+    const notifiedTimerKeysRef = useRef(new Set());
 
     useEffect(() => {
         if (!isSupabaseConfigured() || !supabase) return;
@@ -231,17 +233,44 @@ export default function BubbleTodoApp() {
         if (activeUser) ensureAvatarProfile(activeUser);
     }, [activeUser]);
 
-    // Keep "now" fresh only while we're on the bubbles view.
-    // (Timer display doesn't need to tick in the other views.)
+    // Keep "now" fresh whenever a timer is active, regardless of view.
     useEffect(() => {
-        if (currentView !== "bubbles") return;
+        const hasRunningTimer = items.some(
+            (it) => typeof it.timerEndsAt === "number" && it.timerEndsAt > Date.now()
+        );
+        if (!hasRunningTimer) return;
         const t = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(t);
-    }, [currentView]);
+    }, [items]);
+
+    useEffect(() => {
+        const shouldNotify =
+            typeof document !== "undefined" &&
+            (document.visibilityState === "hidden" || currentView !== "bubbles");
+        if (!shouldNotify) return;
+
+        const finishedTimers = items.filter((it) => {
+            if (typeof it.timerEndsAt !== "number") return false;
+            return it.timerEndsAt <= now;
+        });
+
+        for (const item of finishedTimers) {
+            const timerKey = `${item.id}:${item.timerEndsAt}`;
+            if (notifiedTimerKeysRef.current.has(timerKey)) continue;
+            notifiedTimerKeysRef.current.add(timerKey);
+
+            notifyFocusTimerDone({
+                title: "Focus timer done",
+                body: item.text ? `"${item.text}" is ready.` : "Your bubble timer is ready.",
+                tag: `focus-timer-${item.id}-${item.timerEndsAt}`
+            });
+        }
+    }, [items, now, currentView]);
 
     const startTimerForItem = (id, minutes = DEFAULT_FOCUS_MINUTES) => {
         const addMs = Math.max(1, minutes) * 60 * 1000;
         const nowMs = Date.now();
+        ensureNotificationPermission();
 
         setItems((prev) =>
             prev.map((it) => {
