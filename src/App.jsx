@@ -25,6 +25,14 @@ import {
     writeLocalXp
 } from "./lib/xp";
 import { ensureNotificationPermission, notifyFocusTimerDone } from "./lib/focusNotifications";
+import {
+    ensureOnlineProfile,
+    getMyStars,
+    listIncomingBattles,
+    listOpponentProfiles,
+    listOutgoingBattles,
+    subscribeToBattleMatches
+} from "./lib/battle";
 
 /** Battle currency used to unlock rewards. New / legacy profiles without `stars` get this once on load. */
 const STARTING_STARS = 0;
@@ -81,6 +89,10 @@ export default function BubbleTodoApp() {
     const [hydrated, setHydrated] = useState(() => !isSupabaseConfigured());
     const [authReady, setAuthReady] = useState(() => !isSupabaseConfigured());
     const [session, setSession] = useState(null);
+    const [onlineOpponentProfiles, setOnlineOpponentProfiles] = useState([]);
+    const [incomingBattles, setIncomingBattles] = useState([]);
+    const [outgoingBattles, setOutgoingBattles] = useState([]);
+    const [onlineStars, setOnlineStars] = useState(null);
     const saveTimerRef = useRef(null);
     const snapshotRef = useRef(null);
     const notifiedTimerKeysRef = useRef(new Set());
@@ -203,6 +215,71 @@ export default function BubbleTodoApp() {
     useEffect(() => {
         if (session?.user) setShowSignInModal(false);
     }, [session]);
+
+    const refreshOnlineBattleState = async () => {
+        if (!isSupabaseConfigured() || !supabase || !session?.user?.id) {
+            setOnlineOpponentProfiles([]);
+            setIncomingBattles([]);
+            setOutgoingBattles([]);
+            setOnlineStars(null);
+            return;
+        }
+        try {
+            const [profiles, incoming, outgoing, stars] = await Promise.all([
+                listOpponentProfiles(),
+                listIncomingBattles(),
+                listOutgoingBattles(),
+                getMyStars()
+            ]);
+            setOnlineOpponentProfiles(profiles);
+            setIncomingBattles(incoming);
+            setOutgoingBattles(outgoing);
+            setOnlineStars(stars);
+        } catch (error) {
+            console.error("[battle] refresh:", error?.message || error);
+        }
+    };
+
+    useEffect(() => {
+        if (!isSupabaseConfigured() || !supabase || !session?.user?.id) return;
+        const baseName =
+            (activeUser && String(activeUser).trim()) ||
+            session.user.email?.split("@")[0] ||
+            "Player";
+        ensureOnlineProfile(baseName).catch((err) =>
+            console.error("[battle] ensure profile:", err?.message || err)
+        );
+    }, [session?.user?.id, session?.user?.email, activeUser]);
+
+    useEffect(() => {
+        if (!session?.user?.id) return;
+        refreshOnlineBattleState();
+        const unsubscribe = subscribeToBattleMatches(() => {
+            refreshOnlineBattleState();
+        });
+        return () => {
+            unsubscribe?.();
+        };
+    }, [session?.user?.id]);
+
+    useEffect(() => {
+        if (!session?.user?.id || !activeUser || typeof onlineStars !== "number") return;
+        setAvatarProfiles((prev) => {
+            const current = prev[activeUser] || {
+                mood: "happy",
+                lastFedAt: Date.now(),
+                stars: STARTING_STARS
+            };
+            if ((current.stars ?? 0) === onlineStars) return prev;
+            return {
+                ...prev,
+                [activeUser]: {
+                    ...current,
+                    stars: onlineStars
+                }
+            };
+        });
+    }, [session?.user?.id, activeUser, onlineStars]);
 
     useEffect(() => {
         if (!needUserHint) return;
@@ -785,6 +862,12 @@ export default function BubbleTodoApp() {
                         getProgress={getLevelProgress}
                         getAvatarName={getAvatarByLevel}
                         onApplyBattleResult={applyBattleResultToAvatars}
+                        sessionUserId={session?.user?.id ?? ""}
+                        onlineModeEnabled={Boolean(session?.user?.id)}
+                        opponentProfiles={onlineOpponentProfiles}
+                        incomingBattles={incomingBattles}
+                        outgoingBattles={outgoingBattles}
+                        onRefreshOnlineBattles={refreshOnlineBattleState}
                     />
                 ) : (
                     <GoalsPage

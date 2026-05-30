@@ -2,6 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import AvatarCard from "./AvatarCard";
 import { randomPastel } from "../utils/helpers";
+import {
+    createBattleChallenge,
+    revealAndResolveMatch,
+    submitOpponentMoves
+} from "../lib/battle";
 
 const MOVES = [
     { id: "rock", label: "Rock", emoji: "🪨" },
@@ -33,8 +38,15 @@ export default function BattlePage({
     xp = 0,
     getProgress,
     getAvatarName,
-    onApplyBattleResult
+    onApplyBattleResult,
+    sessionUserId = "",
+    onlineModeEnabled = false,
+    opponentProfiles = [],
+    incomingBattles = [],
+    outgoingBattles = [],
+    onRefreshOnlineBattles
 }) {
+    const [battleMode, setBattleMode] = useState("local"); // local | online
     const [player1, setPlayer1] = useState(activeUser || users[0] || "");
     const [player2, setPlayer2] = useState(() => {
         const fallback1 = activeUser || users[0] || "";
@@ -53,6 +65,13 @@ export default function BattlePage({
     const [showWinnerVideoModal, setShowWinnerVideoModal] = useState(false);
     const [videoFallbackIndex, setVideoFallbackIndex] = useState(0);
     const [starWager, setStarWager] = useState(1);
+    const [onlineOpponentId, setOnlineOpponentId] = useState("");
+    const [onlineCreateMoves, setOnlineCreateMoves] = useState([null, null, null]);
+    const [onlineReplyMoves, setOnlineReplyMoves] = useState([null, null, null]);
+    const [selectedIncomingId, setSelectedIncomingId] = useState("");
+    const [pendingReveal, setPendingReveal] = useState({});
+    const [onlineBusy, setOnlineBusy] = useState(false);
+    const [onlineError, setOnlineError] = useState("");
 
     const fightTimeoutRef = useRef([]);
 
@@ -75,6 +94,14 @@ export default function BattlePage({
         phase === "picking";
 
     const otherUsersFor = (pickedUser) => users.filter((u) => u !== pickedUser);
+
+    useEffect(() => {
+        if (onlineModeEnabled) {
+            setBattleMode("online");
+        } else {
+            setBattleMode("local");
+        }
+    }, [onlineModeEnabled]);
 
     useEffect(() => {
         setPlayer1(activeUser || users[0] || "");
@@ -341,9 +368,245 @@ export default function BattlePage({
     );
 
     const impactGlow = useMemo(() => randomPastel(), []);
+    const isOnline = battleMode === "online" && onlineModeEnabled && !!sessionUserId;
+
+    const selectedOpponent = opponentProfiles.find((p) => p.user_id === onlineOpponentId) || null;
+    const selectedIncoming =
+        incomingBattles.find((m) => m.id === selectedIncomingId) ||
+        incomingBattles.find((m) => m.status === "pending" && !m.opponent_moves) ||
+        null;
+    const resolvableOutgoing = outgoingBattles.find(
+        (m) => m.status === "pending" && Array.isArray(m.opponent_moves) && m.opponent_moves.length === 3
+    );
+
+    const pickOnlineMove = (slotIndex, moveId, side) => {
+        if (!moveId) return;
+        if (side === "create") {
+            setOnlineCreateMoves((prev) => prev.map((m, i) => (i === slotIndex ? moveId : m)));
+            return;
+        }
+        setOnlineReplyMoves((prev) => prev.map((m, i) => (i === slotIndex ? moveId : m)));
+    };
+
+    const onCreateOnlineChallenge = async () => {
+        if (!onlineOpponentId) return;
+        if (!onlineCreateMoves.every(Boolean)) return;
+        setOnlineBusy(true);
+        setOnlineError("");
+        try {
+            const { match, reveal } = await createBattleChallenge(
+                onlineOpponentId,
+                starWager,
+                onlineCreateMoves
+            );
+            setPendingReveal((prev) => ({ ...prev, [match.id]: reveal }));
+            setOnlineCreateMoves([null, null, null]);
+            if (onRefreshOnlineBattles) await onRefreshOnlineBattles();
+        } catch (err) {
+            setOnlineError(err?.message || "Failed creating battle challenge.");
+        } finally {
+            setOnlineBusy(false);
+        }
+    };
+
+    const onSubmitOnlineReply = async () => {
+        if (!selectedIncoming?.id) return;
+        if (!onlineReplyMoves.every(Boolean)) return;
+        setOnlineBusy(true);
+        setOnlineError("");
+        try {
+            await submitOpponentMoves(selectedIncoming.id, onlineReplyMoves);
+            setOnlineReplyMoves([null, null, null]);
+            if (onRefreshOnlineBattles) await onRefreshOnlineBattles();
+        } catch (err) {
+            setOnlineError(err?.message || "Failed submitting moves.");
+        } finally {
+            setOnlineBusy(false);
+        }
+    };
+
+    const onRevealResolve = async (matchId) => {
+        const reveal = pendingReveal[matchId];
+        if (!reveal?.moves || !reveal?.salt) {
+            setOnlineError("Challenge secret not found in this session.");
+            return;
+        }
+        setOnlineBusy(true);
+        setOnlineError("");
+        try {
+            await revealAndResolveMatch(matchId, reveal.moves, reveal.salt);
+            if (onRefreshOnlineBattles) await onRefreshOnlineBattles();
+        } catch (err) {
+            setOnlineError(err?.message || "Failed resolving match.");
+        } finally {
+            setOnlineBusy(false);
+        }
+    };
+
+    if (isOnline) {
+        return (
+            <div className="min-h-[62vh] sm:min-h-[70vh] rounded-3xl bg-white/80 p-4 sm:p-5 shadow-lg border border-slate-200">
+                <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-slate-800">Avatar Battle</h2>
+                    <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs">
+                        <button
+                            onClick={() => setBattleMode("local")}
+                            className="rounded-lg px-3 py-1.5 text-slate-600 hover:bg-white"
+                        >
+                            Local
+                        </button>
+                        <button className="rounded-lg bg-slate-900 px-3 py-1.5 text-white">
+                            Online
+                        </button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                        <div className="text-sm font-semibold text-slate-700">Create async challenge</div>
+                        <div className="mt-2 text-xs text-slate-500">
+                            Pick 3 hidden moves and send challenge to another authenticated player.
+                        </div>
+                        <div className="mt-3">
+                            <label className="block text-xs text-slate-500 mb-1">Opponent</label>
+                            <select
+                                value={onlineOpponentId}
+                                onChange={(e) => setOnlineOpponentId(e.target.value)}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                            >
+                                <option value="">Select opponent</option>
+                                {opponentProfiles.map((p) => (
+                                    <option key={p.user_id} value={p.user_id}>
+                                        {p.display_name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                            {[0, 1, 2].map((idx) => (
+                                <div key={idx} className="rounded-xl border border-slate-200 bg-white p-2">
+                                    <div className="text-[11px] text-slate-500 mb-1">Round {idx + 1}</div>
+                                    <div className="grid grid-cols-3 gap-1">
+                                        {MOVES.map((m) => (
+                                            <button
+                                                key={m.id}
+                                                onClick={() => pickOnlineMove(idx, m.id, "create")}
+                                                className={`rounded-lg border px-2 py-1 text-sm ${
+                                                    onlineCreateMoves[idx] === m.id
+                                                        ? "border-slate-900 bg-slate-900 text-white"
+                                                        : "border-slate-200 bg-white"
+                                                }`}
+                                            >
+                                                {m.emoji}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <button
+                            onClick={onCreateOnlineChallenge}
+                            disabled={onlineBusy || !onlineOpponentId || !onlineCreateMoves.every(Boolean)}
+                            className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                        >
+                            Send challenge
+                        </button>
+                        {selectedOpponent && (
+                            <div className="mt-2 text-xs text-slate-500">Opponent: {selectedOpponent.display_name}</div>
+                        )}
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                        <div className="text-sm font-semibold text-slate-700">Incoming challenge</div>
+                        <div className="mt-2">
+                            <select
+                                value={selectedIncoming?.id || ""}
+                                onChange={(e) => setSelectedIncomingId(e.target.value)}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                            >
+                                <option value="">Select incoming match</option>
+                                {incomingBattles
+                                    .filter((m) => m.status === "pending" && !m.opponent_moves)
+                                    .map((m) => (
+                                        <option key={m.id} value={m.id}>
+                                            {m.id.slice(0, 8)} • wager {m.star_wager}
+                                        </option>
+                                    ))}
+                            </select>
+                        </div>
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                            {[0, 1, 2].map((idx) => (
+                                <div key={idx} className="rounded-xl border border-slate-200 bg-white p-2">
+                                    <div className="text-[11px] text-slate-500 mb-1">Round {idx + 1}</div>
+                                    <div className="grid grid-cols-3 gap-1">
+                                        {MOVES.map((m) => (
+                                            <button
+                                                key={m.id}
+                                                onClick={() => pickOnlineMove(idx, m.id, "reply")}
+                                                className={`rounded-lg border px-2 py-1 text-sm ${
+                                                    onlineReplyMoves[idx] === m.id
+                                                        ? "border-slate-900 bg-slate-900 text-white"
+                                                        : "border-slate-200 bg-white"
+                                                }`}
+                                            >
+                                                {m.emoji}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <button
+                            onClick={onSubmitOnlineReply}
+                            disabled={onlineBusy || !selectedIncoming?.id || !onlineReplyMoves.every(Boolean)}
+                            className="mt-3 rounded-xl bg-sky-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                        >
+                            Submit moves
+                        </button>
+                    </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-sm font-semibold text-slate-700">Outgoing matches ready to resolve</div>
+                    <div className="mt-2 text-xs text-slate-500">
+                        When opponent has submitted moves, reveal your secret to resolve the match.
+                    </div>
+                    {resolvableOutgoing ? (
+                        <button
+                            onClick={() => onRevealResolve(resolvableOutgoing.id)}
+                            disabled={onlineBusy}
+                            className="mt-3 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                        >
+                            Reveal & resolve {resolvableOutgoing.id.slice(0, 8)}
+                        </button>
+                    ) : (
+                        <div className="mt-3 text-sm text-slate-500">No outgoing match is ready yet.</div>
+                    )}
+                </div>
+
+                {onlineError ? (
+                    <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                        {onlineError}
+                    </div>
+                ) : null}
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-[62vh] sm:min-h-[70vh] rounded-3xl bg-white/80 p-4 sm:p-5 shadow-lg border border-slate-200">
+            <div className="mb-3 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs">
+                <button className="rounded-lg bg-slate-900 px-3 py-1.5 text-white">Local</button>
+                <button
+                    onClick={() => setBattleMode("online")}
+                    className={`rounded-lg px-3 py-1.5 ${
+                        onlineModeEnabled ? "text-slate-600 hover:bg-white" : "text-slate-300"
+                    }`}
+                    disabled={!onlineModeEnabled}
+                >
+                    Online
+                </button>
+            </div>
             <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                     <h2 className="text-xl font-semibold text-slate-800">Avatar Battle</h2>
